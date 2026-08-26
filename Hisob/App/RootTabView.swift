@@ -2,28 +2,28 @@ import HisobCore
 import SwiftUI
 
 struct RootTabView: View {
-    let repository: any LedgerRepository
+    let store: LedgerStore
 
     @State private var router = AppRouter()
 
     var body: some View {
         TabView(selection: tabSelection) {
             NavigationStack(path: $router.monthPath) {
-                MonthView(viewModel: MonthViewModel(repository: repository))
+                MonthView(viewModel: MonthViewModel(store: store))
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
             .tabItem { Label(AppTab.month.title, systemImage: AppTab.month.symbol) }
             .tag(AppTab.month)
 
             NavigationStack(path: $router.analyticsPath) {
-                PlaceholderView(title: L.Tab.analytics, symbol: AppTab.analytics.symbol)
+                AnalyticsView(viewModel: AnalyticsViewModel(store: store))
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
             .tabItem { Label(AppTab.analytics.title, systemImage: AppTab.analytics.symbol) }
             .tag(AppTab.analytics)
 
             NavigationStack(path: $router.settingsPath) {
-                PlaceholderView(title: L.Tab.settings, symbol: AppTab.settings.symbol)
+                SettingsView(store: store, path: $router.settingsPath)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
             .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.symbol) }
@@ -49,7 +49,7 @@ struct RootTabView: View {
     private func destination(for route: AppRoute) -> some View {
         switch route {
         case .incomeSources:
-            PlaceholderView(title: L.Tab.settings, symbol: "briefcase")
+            IncomeSourcesView(viewModel: IncomeSourcesViewModel(store: store))
         case .expenseDetails:
             PlaceholderView(title: L.Month.expenses, symbol: "list.bullet")
         }
