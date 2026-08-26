@@ -37,7 +37,12 @@ cd HisobCore && swift test
 cp Signing.xcconfig.example Signing.xcconfig
 ```
 
-Впишите в него свой Team ID (Xcode → Settings → Accounts → ваш Apple ID → Team).
+Впишите в него свой Team ID. В интерфейсе Xcode он не показывается — лежит
+в поле `OU` сертификата подписи:
+
+```bash
+security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject | tr ',' '\n' | grep OU=
+```
 Файл не хранится в git: проект генерируется из `project.yml`, и команда,
 выбранная в интерфейсе Xcode, слетала бы при каждой перегенерации.
 

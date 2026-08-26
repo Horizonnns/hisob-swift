@@ -3,9 +3,20 @@
 // Скопируйте в Signing.xcconfig и впишите свой Team ID:
 //   cp Signing.xcconfig.example Signing.xcconfig
 //
-// Team ID виден в Xcode → Settings → Accounts → ваш Apple ID → Team,
-// либо на developer.apple.com → Membership. Для бесплатного Apple ID
-// это тоже работает — идентификатор там личной команды.
+// Team ID в интерфейсе Xcode не показывается. Он лежит в поле OU
+// сертификата подписи — достать так:
+//
+//   security find-certificate -c "Apple Development" -p \
+//     | openssl x509 -noout -subject | tr ',' '\n' | grep OU=
+//
+// Выведет строку вида `OU=TPXBSGV9L2` — это и есть Team ID.
+//
+// Не путайте с идентификатором в скобках в имени сертификата
+// («Apple Development: you@icloud.com (PX87ZC5PU3)») — там номер
+// самого сертификата, а не команды.
+//
+// Для бесплатного Apple ID всё работает так же: у личной команды
+// тоже есть идентификатор.
 //
 // Файл вынесен отдельно и не хранится в git: проект генерируется из
 // project.yml, и команда, выбранная в интерфейсе Xcode, слетала бы при
