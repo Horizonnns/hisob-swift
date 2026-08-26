@@ -88,23 +88,32 @@ POSTGRES_URL_NON_POOLING="<direct-url>" npx prisma migrate deploy
 6. Проверить: `curl https://<домен>/api/health` → `{"ok":true}`,
    затем `curl -H "Authorization: Bearer <токен>" https://<домен>/api/ledger`.
 
-### Почему нет `"type": "module"`
+### Точка входа и формат модулей
 
-Осознанно. Vercel собирает `src/index.ts` в один файл, и с `type: module`
-бандл получается в формате ESM, где `require` недоступен. `@prisma/client`
-внутри CommonJS и требует модули динамически — функция падает на старте
-с `Dynamic require of "node:fs" is not supported`, то есть
-`FUNCTION_INVOCATION_FAILED` на любом запросе.
+Vercel не бандлит проект: он транспилирует TypeScript в отдельные `.js`
+с сохранением `import`-синтаксиса и запускает их обычным Node. Отсюда два
+жёстких требования, на каждом из которых деплой уже падал:
 
-Локально это незаметно: `tsx` резолвит модули на лету и ничего не бандлит.
-Поэтому есть отдельная проверка:
+1. **`"type": "module"` в `package.json` обязателен.** Без него Node считает
+   транспилированные `.js` за CommonJS и падает с
+   `SyntaxError: Cannot use import statement outside a module`.
+2. **Default-экспорт `src/index.ts` — функция, а не экземпляр Hono.**
+   Рантайм ждёт обработчик; на объект отвечает `Invalid export`. Поэтому
+   `export default handle(app)` из `hono/vercel`.
+
+Оба нарушения дают одинаковый `FUNCTION_INVOCATION_FAILED` на любом
+запросе, включая `/api/health`, — функция не поднимается вовсе, и по коду
+ошибки причину не отличить. Смотреть надо Runtime Logs.
+
+Локальный `tsx` ничего из этого не воспроизводит. Перед деплоем:
 
 ```bash
 npm run check:bundle
 ```
 
-Она собирает точку входа и импортирует результат — ровно то, что делает
-платформа. Прогоняйте её перед деплоем.
+Проверка транспилирует исходники так же, как платформа, убеждается, что
+они грузятся как ESM, и что default-экспорт — обработчик, отвечающий 200
+на `/api/health`.
 
 ### Генерация клиента Prisma
 
