@@ -1,20 +1,15 @@
 import Foundation
 import HisobCore
 
-/// Демонстрационные данные для превью и первого запуска.
+/// Демонстрационные данные для превью и режима без подключения.
 ///
-/// ВНИМАНИЕ: это не выгрузка из прода. Структура источников повторяет реальную
-/// (OD — текущая работа, asrmall завершён в июле 2026), но суммы asrmall
-/// и список трат условные. Реальные данные приезжают импортом — см.
-/// `docs/migration.md`.
+/// История окладов взята из веб-версии как есть. Записи `asrmall` за июль
+/// с суммой 1 TJS — это костыль старой модели: даты окончания у оклада не
+/// было, и чтобы источник перестал начислять доход, выставляли символическую
+/// сумму. Здесь для этого есть `endedAt`, но запись сохранена, чтобы цифры
+/// за июль воспроизводились в точности.
 enum PreviewData {
-    static let ledger: Ledger = {
-        Ledger(
-            currency: .tjs,
-            sources: [od, asrmall],
-            expenses: expenses
-        )
-    }()
+    static let ledger = Ledger(currency: .tjs, sources: [od, asrmall], expenses: expenses)
 
     private static let od = IncomeSource(
         name: "OD",
@@ -29,16 +24,36 @@ enum PreviewData {
         name: "asrmall",
         role: "Frontend Engineer",
         salaryHistory: [
-            SalaryEntry(effectiveFrom: date(2026, 1, 1), amount: 5000)
+            SalaryEntry(effectiveFrom: date(2026, 3, 10), amount: 6000),
+            SalaryEntry(effectiveFrom: date(2026, 4, 1), amount: 8000),
+            SalaryEntry(effectiveFrom: date(2026, 6, 1), amount: 4000),
+            SalaryEntry(effectiveFrom: date(2026, 7, 1), amount: 1)
         ],
         endedAt: YearMonth(year: 2026, month: 7)
     )
 
     private static let expenses: [Expense] = [
-        .single(date: date(2026, 6, 12), category: .food, title: "продукты", amount: 1800),
-        .single(date: date(2026, 6, 20), category: .transport, title: "такси", amount: 260),
-        .single(date: date(2026, 7, 3), category: .utilities, title: "свет и вода", amount: 640),
-        .single(date: date(2026, 7, 15), category: .food, title: "продукты", amount: 2100),
+        .single(date: date(2026, 7, 1), category: .hygiene, title: "айна (3кг)", amount: 75),
+        .group(
+            date: date(2026, 7, 1),
+            category: .food,
+            title: "перекус",
+            items: [
+                ExpenseItem(amount: 25, title: "самса"),
+                ExpenseItem(amount: 15, title: "чай")
+            ]
+        ),
+        .group(
+            date: date(2026, 7, 1),
+            category: .food,
+            title: "мороженое",
+            items: [
+                ExpenseItem(amount: 15, title: "рожок"),
+                ExpenseItem(amount: 10, title: "стаканчик")
+            ]
+        ),
+        .single(date: date(2026, 7, 8), category: .transport, title: "такси", amount: 260),
+        .single(date: date(2026, 7, 19), category: .utilities, title: "свет и вода", amount: 640),
         .single(date: date(2026, 8, 2), category: .food, title: "rc-cola", amount: 13),
         .group(
             date: date(2026, 8, 2),
