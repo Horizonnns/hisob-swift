@@ -1,0 +1,15 @@
+// Подпись для установки на устройство.
+//
+// Скопируйте в Signing.xcconfig и впишите свой Team ID:
+//   cp Signing.xcconfig.example Signing.xcconfig
+//
+// Team ID виден в Xcode → Settings → Accounts → ваш Apple ID → Team,
+// либо на developer.apple.com → Membership. Для бесплатного Apple ID
+// это тоже работает — идентификатор там личной команды.
+//
+// Файл вынесен отдельно и не хранится в git: проект генерируется из
+// project.yml, и команда, выбранная в интерфейсе Xcode, слетала бы при
+// каждой перегенерации.
+
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Automatic

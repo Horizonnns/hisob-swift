@@ -19,6 +19,9 @@ targets:
     dependencies:
       - package: HisobCore
         product: HisobCore
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kosimjon.hisob
