@@ -8,10 +8,11 @@ import SwiftUI
 struct ExpenseEditor: View {
     @State private var draft: ExpenseDraft
     @State private var isSaving = false
+    @State private var saveError: String?
     @FocusState private var focus: Field?
 
     let currency: CurrencyCode
-    let onSave: (Expense) async -> Void
+    let onSave: (Expense) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -25,7 +26,7 @@ struct ExpenseEditor: View {
     init(
         editing expense: Expense,
         currency: CurrencyCode,
-        onSave: @escaping (Expense) async -> Void
+        onSave: @escaping (Expense) async -> Bool
     ) {
         _draft = State(initialValue: ExpenseDraft(editing: expense))
         self.currency = currency
@@ -35,7 +36,7 @@ struct ExpenseEditor: View {
     init(
         defaultDate: Date,
         currency: CurrencyCode,
-        onSave: @escaping (Expense) async -> Void
+        onSave: @escaping (Expense) async -> Bool
     ) {
         _draft = State(initialValue: ExpenseDraft(defaultDate: defaultDate))
         self.currency = currency
@@ -76,6 +77,14 @@ struct ExpenseEditor: View {
                     DatePicker(L.AddExpense.date, selection: $draft.date, displayedComponents: .date)
                         .environment(\.locale, Locale(identifier: "ru_RU"))
                 }
+
+                if let saveError {
+                    Section {
+                        Label(saveError, systemImage: "exclamationmark.triangle.fill")
+                            .font(DS.Typography.caption)
+                            .foregroundStyle(DS.Palette.expense)
+                    }
+                }
             }
             .animation(DS.Motion.resolved(DS.Motion.snappy, reduceMotion: reduceMotion), value: draft.kind)
             .navigationTitle(draft.isNew ? L.AddExpense.title : L.Expense.editTitle)
@@ -85,9 +94,13 @@ struct ExpenseEditor: View {
                     Button(L.AddExpense.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(draft.isNew ? L.AddExpense.save : L.Sources.save, action: save)
-                        .disabled(!draft.canSave || isSaving)
-                        .fontWeight(.semibold)
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button(draft.isNew ? L.AddExpense.save : L.Sources.save, action: save)
+                            .disabled(!draft.canSave)
+                            .fontWeight(.semibold)
+                    }
                 }
             }
         }
@@ -170,10 +183,15 @@ struct ExpenseEditor: View {
     private func save() {
         guard let expense = draft.build() else { return }
         isSaving = true
+        saveError = nil
         Task {
-            await onSave(expense)
+            let succeeded = await onSave(expense)
             isSaving = false
-            dismiss()
+            if succeeded {
+                dismiss()
+            } else {
+                saveError = L.Error.saveFailed
+            }
         }
     }
 }

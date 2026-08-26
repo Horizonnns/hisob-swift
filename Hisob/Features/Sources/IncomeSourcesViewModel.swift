@@ -52,7 +52,8 @@ final class IncomeSourcesViewModel {
         await store.load()
     }
 
-    func save(_ source: IncomeSource) async {
+    @discardableResult
+    func save(_ source: IncomeSource) async -> Bool {
         await store.save(source)
     }
 

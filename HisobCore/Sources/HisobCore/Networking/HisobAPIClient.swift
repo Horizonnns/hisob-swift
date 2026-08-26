@@ -5,9 +5,22 @@ public struct HisobAPIClient: Sendable {
     private let configuration: APIConfiguration
     private let session: URLSession
 
-    public init(configuration: APIConfiguration, session: URLSession = .shared) {
+    public init(configuration: APIConfiguration, session: URLSession? = nil) {
         self.configuration = configuration
-        self.session = session
+        self.session = session ?? Self.makeSession()
+    }
+
+    /// Сессия с коротким таймаутом.
+    ///
+    /// По умолчанию `URLSession` ждёт ответа 60 секунд, а ресурс — неделю.
+    /// Для приложения, где кнопка «Сохранить» блокируется на время запроса,
+    /// это выглядит как зависание: пользователь не понимает, идёт ли что-то.
+    private static func makeSession() -> URLSession {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 20
+        configuration.timeoutIntervalForResource = 30
+        configuration.waitsForConnectivity = false
+        return URLSession(configuration: configuration)
     }
 
     // MARK: - Запросы

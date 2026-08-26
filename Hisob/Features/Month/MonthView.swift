@@ -203,12 +203,12 @@ struct MonthView: View {
                 action: viewModel.clearFilters
             )
         } else {
+            // Без кнопки: добавление уже есть в «плюсе» на панели навигации,
+            // а две кнопки для одного действия только сбивают.
             EmptyStateView(
                 symbol: "tray",
                 title: L.Empty.noExpensesTitle,
-                message: L.Empty.noExpensesMessage,
-                actionTitle: L.Month.addExpense,
-                action: { isAddingExpense = true }
+                message: L.Empty.noExpensesMessage
             )
         }
     }

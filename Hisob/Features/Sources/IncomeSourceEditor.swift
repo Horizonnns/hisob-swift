@@ -5,7 +5,7 @@ import SwiftUI
 /// дата завершения работы.
 struct IncomeSourceEditor: View {
     let currency: CurrencyCode
-    let onSave: (IncomeSource) async -> Void
+    let onSave: (IncomeSource) async -> Bool
 
     @State private var draft: IncomeSource
     @State private var isEnded: Bool
@@ -13,6 +13,7 @@ struct IncomeSourceEditor: View {
     @State private var newSalaryAmount = ""
     @State private var newSalaryDate = Date.now
     @State private var isSaving = false
+    @State private var saveError: String?
 
     private let isNew: Bool
 
@@ -21,7 +22,7 @@ struct IncomeSourceEditor: View {
     init(
         source: IncomeSource?,
         currency: CurrencyCode,
-        onSave: @escaping (IncomeSource) async -> Void
+        onSave: @escaping (IncomeSource) async -> Bool
     ) {
         let resolved = source ?? IncomeSource(name: "")
         _draft = State(initialValue: resolved)
@@ -73,6 +74,14 @@ struct IncomeSourceEditor: View {
                         Text(L.Sources.endedFooter)
                     }
                 }
+
+                if let saveError {
+                    Section {
+                        Label(saveError, systemImage: "exclamationmark.triangle.fill")
+                            .font(DS.Typography.caption)
+                            .foregroundStyle(DS.Palette.expense)
+                    }
+                }
             }
             .navigationTitle(isNew ? L.Sources.newSource : L.Sources.editSource)
             .navigationBarTitleDisplayMode(.inline)
@@ -81,9 +90,15 @@ struct IncomeSourceEditor: View {
                     Button(L.AddExpense.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L.Sources.save, action: save)
-                        .disabled(!canSave)
-                        .fontWeight(.semibold)
+                    if isSaving {
+                        // Видимый признак, что запрос идёт: без него серая
+                        // кнопка выглядит как сломанная.
+                        ProgressView()
+                    } else {
+                        Button(L.Sources.save, action: save)
+                            .disabled(!canSave)
+                            .fontWeight(.semibold)
+                    }
                 }
             }
         }
@@ -168,10 +183,17 @@ struct IncomeSourceEditor: View {
         result.endedAt = isEnded ? YearMonth(date: endedDate) : nil
 
         isSaving = true
+        saveError = nil
         Task {
-            await onSave(result)
+            let succeeded = await onSave(result)
             isSaving = false
-            dismiss()
+            // При неудаче лист остаётся открытым: изменения откатились,
+            // и закрыться молча значило бы соврать, что всё сохранено.
+            if succeeded {
+                dismiss()
+            } else {
+                saveError = L.Error.saveFailed
+            }
         }
     }
 }

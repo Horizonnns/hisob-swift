@@ -10,7 +10,7 @@ public struct RemoteLedgerRepository: LedgerRepository {
         self.calendar = calendar
     }
 
-    public init(configuration: APIConfiguration, session: URLSession = .shared, calendar: Calendar = .current) {
+    public init(configuration: APIConfiguration, session: URLSession? = nil, calendar: Calendar = .current) {
         self.init(client: HisobAPIClient(configuration: configuration, session: session), calendar: calendar)
     }
 

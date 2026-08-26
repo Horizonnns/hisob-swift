@@ -87,11 +87,13 @@ final class MonthViewModel {
         clearFilters()
     }
 
-    func addExpense(_ expense: Expense) async {
+    @discardableResult
+    func addExpense(_ expense: Expense) async -> Bool {
         await store.add(expense)
     }
 
-    func updateExpense(_ expense: Expense) async {
+    @discardableResult
+    func updateExpense(_ expense: Expense) async -> Bool {
         await store.update(expense)
     }
 

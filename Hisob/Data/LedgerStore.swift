@@ -68,20 +68,22 @@ final class LedgerStore {
 
     // MARK: - Траты
 
-    func add(_ expense: Expense) async {
+    @discardableResult
+    func add(_ expense: Expense) async -> Bool {
         ledger.expenses.append(expense)
-        await perform(rollback: { [weak self] in
+        return await perform(rollback: { [weak self] in
             self?.ledger.expenses.removeAll { $0.id == expense.id }
         }) { [repository] in
             try await repository.add(expense)
         }
     }
 
-    func update(_ expense: Expense) async {
-        guard let index = ledger.expenses.firstIndex(where: { $0.id == expense.id }) else { return }
+    @discardableResult
+    func update(_ expense: Expense) async -> Bool {
+        guard let index = ledger.expenses.firstIndex(where: { $0.id == expense.id }) else { return false }
         let previous = ledger.expenses[index]
         ledger.expenses[index] = expense
-        await perform(rollback: { [weak self] in
+        return await perform(rollback: { [weak self] in
             guard let self, let index = ledger.expenses.firstIndex(where: { $0.id == previous.id })
             else { return }
             ledger.expenses[index] = previous
@@ -103,14 +105,15 @@ final class LedgerStore {
 
     // MARK: - Источники дохода
 
-    func save(_ source: IncomeSource) async {
+    @discardableResult
+    func save(_ source: IncomeSource) async -> Bool {
         let previous = ledger.sources
         if let index = ledger.sources.firstIndex(where: { $0.id == source.id }) {
             ledger.sources[index] = source
         } else {
             ledger.sources.append(source)
         }
-        await perform(rollback: { [weak self] in
+        return await perform(rollback: { [weak self] in
             self?.ledger.sources = previous
         }) { [repository] in
             try await repository.save(source)
@@ -153,16 +156,29 @@ final class LedgerStore {
     }
 
     /// Выполняет запись; при ошибке откатывает состояние и показывает баннер.
+    ///
+    /// Возвращает, удалась ли операция: экрану редактирования нужно знать,
+    /// закрываться ли. Молча закрыться и откатить правку — худший вариант:
+    /// пользователь считает, что сохранил.
+    @discardableResult
     private func perform(
         rollback: @MainActor @escaping () -> Void,
         write: @Sendable @escaping () async throws -> Void
-    ) async {
+    ) async -> Bool {
+        var succeeded = true
         do {
             try await write()
         } catch {
             rollback()
-            operationError = L.Error.saveFailed
+            operationError = errorText(for: error)
+            succeeded = false
         }
         await refreshPendingCount()
+        return succeeded
+    }
+
+    /// Текст ошибки для пользователя: у сетевых причина понятна и полезна.
+    private func errorText(for error: any Error) -> String {
+        (error as? APIError)?.errorDescription ?? L.Error.saveFailed
     }
 }
