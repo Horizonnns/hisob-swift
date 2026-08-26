@@ -77,11 +77,28 @@ Root Directory = `api`.
    назвала их иначе — добавьте переменные с нужными именами.
 3. Добавить `HISOB_API_TOKEN` вручную (`openssl rand -base64 32`).
 4. **Передеплоить** — переменные подхватываются только новой сборкой.
-5. Применить миграции со своей машины, указав прямое подключение:
+5. Применить миграции со своей машины.
+
+   `vercel env pull --environment=production` **не подходит**: Vercel не
+   выгружает секреты production и пишет вместо них `[SENSITIVE]`, а Prisma
+   отвечает на это невнятной `P1013`. Строки берите в консоли Neon
+   (Vercel → Storage → база → Open in Neon → Connection Details) и впишите
+   в `api/.env` вручную:
+
+```
+POSTGRES_PRISMA_URL="postgresql://…-pooler…?sslmode=require&pgbouncer=true"
+POSTGRES_URL_NON_POOLING="postgresql://…?sslmode=require"
+```
+
+   Пулерная строка — с `-pooler` в хосте, прямая — без. Затем:
 
 ```bash
-POSTGRES_URL_NON_POOLING="<direct-url>" npx prisma migrate deploy
+npm run db:deploy
 ```
+
+   Перед миграцией прогоняется `db:check`: он отличает заглушку, отсутствие
+   переменной и перепутанные местами строки — вместо `P1013` будет понятный
+   текст.
 
 Миграции запускаются отдельно от сборки намеренно: откат деплоя не должен
 оставлять базу в изменённом состоянии.

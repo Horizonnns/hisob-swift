@@ -12,9 +12,10 @@
     "build": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:deploy": "npm run db:check && prisma migrate deploy",
     "db:studio": "prisma studio",
-    "import:legacy": "tsx scripts/import-legacy.ts"
+    "import:legacy": "tsx scripts/import-legacy.ts",
+    "db:check": "node --env-file-if-exists=.env scripts/check-db-env.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.9",
