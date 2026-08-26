@@ -88,35 +88,37 @@ POSTGRES_URL_NON_POOLING="<direct-url>" npx prisma migrate deploy
 6. Проверить: `curl https://<домен>/api/health` → `{"ok":true}`,
    затем `curl -H "Authorization: Bearer <токен>" https://<домен>/api/ledger`.
 
-### Точка входа и формат модулей
+### Точка входа
 
 Vercel не бандлит проект: он транспилирует TypeScript в отдельные `.js`
-с сохранением `import`-синтаксиса, а **каждый файл в корне `src/` считает
-точкой входа** и требует от него default-экспорт в виде функции.
+с сохранением ESM-синтаксиса. Точку входа он **ищет по импорту `hono`**
+среди файлов в корне `src/`, и каждый файл оттуда считает кандидатом.
 
 Отсюда устройство каталога:
 
 ```
 src/
-├── index.ts        единственный файл в корне — export default handle(app)
-└── server/         всё остальное: app.ts, lib/, middleware/
+├── index.ts        единственный файл в корне: new Hono() + export default handle(app)
+└── server/         routes.ts, lib/, middleware/
 scripts/serve.ts    локальный запуск, тоже вне src/
 ```
 
-Три требования, на каждом из которых деплой уже падал:
+Четыре требования, на каждом из которых деплой уже падал:
 
-1. **`"type": "module"` обязателен** — иначе Node читает транспилированные
-   `.js` как CommonJS: `SyntaxError: Cannot use import statement outside a module`.
-2. **В корне `src/` не должно быть ничего, кроме точки входа.** Пока рядом
-   лежал `app.ts` с одним именованным экспортом, платформа отвечала
+1. **`"type": "module"`** — иначе Node читает транспилированные `.js`
+   как CommonJS: `SyntaxError: Cannot use import statement outside a module`.
+2. **Точка входа импортирует `hono` и создаёт `new Hono()`.** Если приложение
+   собирается в другом модуле, сборка обрывается с
+   `No entrypoint found which imports hono`.
+3. **В корне `src/` нет ничего, кроме точки входа.** Пока рядом лежал
+   `app.ts`, платформа выбирала его и отвечала
    `Invalid export found in module ".../src/app.js"`.
-3. **Default-экспорт — функция, а не экземпляр Hono.** Поэтому
-   `export default handle(app)` из `hono/vercel`: адаптер оборачивает
-   приложение в `(req) => app.fetch(req)`.
+4. **Default-экспорт — функция, а не экземпляр Hono**: `handle(app)`
+   из `hono/vercel` оборачивает приложение в `(req) => app.fetch(req)`.
 
-Все три нарушения дают один и тот же `FUNCTION_INVOCATION_FAILED` на любом
-запросе, включая `/api/health`, — по коду ошибки их не различить. Причину
-показывают только Runtime Logs.
+Нарушения 1, 3 и 4 дают одинаковый `FUNCTION_INVOCATION_FAILED` на любом
+запросе — по коду их не различить, причину показывают Runtime Logs.
+Нарушение 2 видно в Build Logs.
 
 Локальный `tsx` не воспроизводит ничего из этого. Перед деплоем:
 
@@ -124,9 +126,7 @@ scripts/serve.ts    локальный запуск, тоже вне src/
 npm run check:bundle
 ```
 
-Проверка транспилирует дерево как платформа, перечисляет точки входа
-в корне `src/`, убеждается, что каждая отдаёт функцию-обработчик, и что
-`/api/health` отвечает 200.
+Проверка транспилирует дерево как платформа и проверяет все четыре условия.
 
 ### Генерация клиента Prisma
 

@@ -1,16 +1,22 @@
+import { Hono } from 'hono'
 import { handle } from 'hono/vercel'
-import { app } from './server/app.js'
+import { registerRoutes } from './server/routes.js'
 
 /**
  * Единственная точка входа для платформы.
  *
- * В корне `src/` намеренно нет других файлов: Vercel считает точкой входа
- * каждый файл верхнего уровня и требует от него default-экспорт в виде
- * функции. Раньше рядом лежал `app.ts` с одним лишь именованным экспортом —
- * платформа отвечала `Invalid export found in module ".../src/app.js"` и
- * падала с `FUNCTION_INVOCATION_FAILED` на любом запросе.
+ * Vercel ищет её по признаку «файл импортирует `hono`» — поэтому
+ * `new Hono()` создаётся здесь, а не в модуле с роутами. Пока приложение
+ * создавалось в `src/app.ts`, платформа выбирала точкой входа его и падала
+ * на отсутствующем default-экспорте; после переноса кандидатов не осталось
+ * вовсе, и сборка обрывалась с `No entrypoint found which imports hono`.
+ *
+ * В корне `src/` намеренно нет других файлов: каждый из них платформа
+ * тоже считает точкой входа.
  *
  * `handle(app)` оборачивает приложение в `(req) => app.fetch(req)` —
  * рантайм ждёт функцию, а не экземпляр Hono.
  */
+const app = registerRoutes(new Hono())
+
 export default handle(app)
