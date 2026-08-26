@@ -73,6 +73,11 @@ enum L {
         static let notConnected = "Демо-режим"
         static let demoNotice = "Подключение не настроено — показаны демонстрационные данные, они не сохраняются. Укажите адрес сервера и токен, чтобы работать с реальной базой."
         static let connectedNotice = "Данные хранятся на сервере. Последняя загрузка сохраняется на устройстве и показывается без сети."
+        static let export = "Экспорт данных"
+        static let exportSubtitle = "Выгрузить всё в файл"
+        static let exportFooter = "Копия, не зависящая ни от сервера, ни от устройства. Держите её где-нибудь отдельно."
+        static let pendingChanges = "Не отправлено"
+        static let pendingChangesFooter = "Изменения сохранены на устройстве и уйдут на сервер, когда появится связь."
     }
 
     enum Connection {
@@ -83,6 +88,19 @@ enum L {
         static let check = "Проверить связь"
         static let disconnect = "Отключить"
         static let disconnectFooter = "Данные на сервере останутся. Приложение вернётся к демонстрационному режиму."
+    }
+
+    enum Expense {
+        static let editTitle = "Трата"
+        static let kind = "Вид"
+        static let singleKind = "Одна сумма"
+        static let groupKind = "Несколько позиций"
+        static let groupTitle = "Название"
+        static let groupTitlePlaceholder = "Например, продукты"
+        static let items = "Позиции"
+        static let itemTitle = "Что"
+        static let addItem = "Добавить позицию"
+        static let groupFooter = "Сумма группы считается из позиций — отдельно её вводить не нужно."
     }
 
     enum Empty {

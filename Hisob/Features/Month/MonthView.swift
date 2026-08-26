@@ -5,6 +5,7 @@ struct MonthView: View {
     @State var viewModel: MonthViewModel
     @State private var expandedIDs: Set<Expense.ID> = []
     @State private var isAddingExpense = false
+    @State private var editingExpense: Expense?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -37,8 +38,13 @@ struct MonthView: View {
         }
         .searchable(text: $viewModel.query.text, prompt: L.Month.search)
         .sheet(isPresented: $isAddingExpense) {
-            AddExpenseSheet(defaultDate: defaultDateForMonth) { amount, category, date, title in
-                await viewModel.addExpense(amount: amount, category: category, date: date, title: title)
+            ExpenseEditor(defaultDate: defaultDateForMonth, currency: viewModel.currency) { expense in
+                await viewModel.addExpense(expense)
+            }
+        }
+        .sheet(item: $editingExpense) { expense in
+            ExpenseEditor(editing: expense, currency: viewModel.currency) { updated in
+                await viewModel.updateExpense(updated)
             }
         }
         .task { await viewModel.load() }
@@ -167,6 +173,14 @@ struct MonthView: View {
                                 } label: {
                                     Label(L.Common.delete, systemImage: "trash")
                                 }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                Button {
+                                    editingExpense = expense
+                                } label: {
+                                    Label(L.Common.edit, systemImage: "pencil")
+                                }
+                                .tint(DS.Palette.brand)
                             }
                     }
                 } header: {

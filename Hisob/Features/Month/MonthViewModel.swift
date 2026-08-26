@@ -87,20 +87,12 @@ final class MonthViewModel {
         clearFilters()
     }
 
-    func addExpense(
-        amount: Money,
-        category: ExpenseCategory,
-        date: Date,
-        title: String
-    ) async {
-        await store.add(
-            .single(
-                date: date,
-                category: category,
-                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                amount: amount
-            )
-        )
+    func addExpense(_ expense: Expense) async {
+        await store.add(expense)
+    }
+
+    func updateExpense(_ expense: Expense) async {
+        await store.update(expense)
     }
 
     func deleteExpense(_ expense: Expense) async {
