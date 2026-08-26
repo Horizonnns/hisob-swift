@@ -88,6 +88,24 @@ POSTGRES_URL_NON_POOLING="<direct-url>" npx prisma migrate deploy
 6. Проверить: `curl https://<домен>/api/health` → `{"ok":true}`,
    затем `curl -H "Authorization: Bearer <токен>" https://<домен>/api/ledger`.
 
+### Почему нет `"type": "module"`
+
+Осознанно. Vercel собирает `src/index.ts` в один файл, и с `type: module`
+бандл получается в формате ESM, где `require` недоступен. `@prisma/client`
+внутри CommonJS и требует модули динамически — функция падает на старте
+с `Dynamic require of "node:fs" is not supported`, то есть
+`FUNCTION_INVOCATION_FAILED` на любом запросе.
+
+Локально это незаметно: `tsx` резолвит модули на лету и ничего не бандлит.
+Поэтому есть отдельная проверка:
+
+```bash
+npm run check:bundle
+```
+
+Она собирает точку входа и импортирует результат — ровно то, что делает
+платформа. Прогоняйте её перед деплоем.
+
 ### Генерация клиента Prisma
 
 `postinstall: prisma generate` обязателен. Пресет Hono не выполняет

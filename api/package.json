@@ -2,11 +2,11 @@
   "name": "hisob-api",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
+    "check:bundle": "node scripts/check-bundle.mjs",
     "postinstall": "prisma generate",
     "build": "prisma generate",
     "db:generate": "prisma generate",
