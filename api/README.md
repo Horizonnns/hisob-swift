@@ -85,12 +85,18 @@ Root Directory = `api`.
    (Vercel → Storage → база → Open in Neon → Connection Details) и впишите
    в `api/.env` вручную:
 
+Копировать нужно строки **целиком**, как их показывает Neon — они длинные,
+   с пользователем, паролем и именем базы:
+
 ```
-POSTGRES_PRISMA_URL="postgresql://…-pooler…?sslmode=require&pgbouncer=true"
-POSTGRES_URL_NON_POOLING="postgresql://…?sslmode=require"
+postgresql://<пользователь>:<пароль>@ep-xxxx-pooler.<регион>.aws.neon.tech/neondb?sslmode=require
+                                              ^^^^^^^ пулерная: этот кусок есть
+postgresql://<пользователь>:<пароль>@ep-xxxx.<регион>.aws.neon.tech/neondb?sslmode=require
+                                              прямая: этого куска нет
 ```
 
-   Пулерная строка — с `-pooler` в хосте, прямая — без. Затем:
+   Первую положите в `POSTGRES_PRISMA_URL`, вторую — в `POSTGRES_URL_NON_POOLING`.
+   Сокращать и дописывать что-либо от себя не нужно. Затем:
 
 ```bash
 npm run db:deploy
