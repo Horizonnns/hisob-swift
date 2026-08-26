@@ -64,20 +64,36 @@ npm run dev          # tsx watch, порт 3200 (или PORT)
 
 ## Развёртывание
 
-**Vercel** — фреймворк-пресет Hono, точка входа `src/index.ts`:
+**Vercel** — фреймворк-пресет Hono, точка входа `src/index.ts`,
+Root Directory = `api`.
+
+Порядок:
+
+1. Импортировать репозиторий, Root Directory = `api`, пресет Hono.
+2. Storage → подключить базу Neon. Переменные подставятся автоматически.
+   **Сверьте имена** в Environment Variables: схема ожидает
+   `POSTGRES_PRISMA_URL` и `POSTGRES_URL_NON_POOLING`. Если интеграция
+   назвала их иначе — добавьте переменные с нужными именами.
+3. Добавить `HISOB_API_TOKEN` вручную (`openssl rand -base64 32`).
+4. **Передеплоить** — переменные подхватываются только новой сборкой.
+5. Применить миграции со своей машины, указав прямое подключение:
 
 ```bash
-vercel deploy
+POSTGRES_URL_NON_POOLING="<direct-url>" npx prisma migrate deploy
 ```
 
-Подключите интеграцию Neon (переменные `POSTGRES_*` подставятся сами),
-`HISOB_API_TOKEN` задайте вручную. Миграции запускаются отдельным шагом:
+Миграции запускаются отдельно от сборки намеренно: откат деплоя не должен
+оставлять базу в изменённом состоянии.
 
-```bash
-npx prisma migrate deploy
-```
+6. Проверить: `curl https://<домен>/api/health` → `{"ok":true}`,
+   затем `curl -H "Authorization: Bearer <токен>" https://<домен>/api/ledger`.
 
-Отдельно от сборки — чтобы откат деплоя не оставлял базу в изменённом состоянии.
+### Генерация клиента Prisma
+
+`postinstall: prisma generate` обязателен. Пресет Hono не выполняет
+Build Command, и без этого хука клиент не генерируется — функция падает
+с `FUNCTION_INVOCATION_FAILED` на любом запросе, включая `/api/health`,
+потому что импорт `@prisma/client` не проходит.
 
 **Свой сервер** — без всякой платформы:
 
