@@ -23,6 +23,8 @@ final class LedgerStore {
     private(set) var state: State = .loading
     /// Сообщение о неудавшейся операции; показывается баннером и гасится само.
     private(set) var operationError: String?
+    /// Сколько изменений лежит в очереди и ждёт связи.
+    private(set) var pendingCount = 0
 
     init(repository: any LedgerRepository) {
         self.repository = repository
@@ -38,6 +40,15 @@ final class LedgerStore {
         } catch {
             state = .failed(error.localizedDescription)
         }
+        await refreshPendingCount()
+    }
+
+    private func refreshPendingCount() async {
+        guard let offline = repository as? OfflineFirstLedgerRepository else {
+            pendingCount = 0
+            return
+        }
+        pendingCount = await offline.pendingCount()
     }
 
     /// Первая загрузка; повторные вызовы (например, при возврате на экран)
@@ -122,6 +133,19 @@ final class LedgerStore {
         }
     }
 
+    // MARK: - Настройки
+
+    func setCurrency(_ currency: CurrencyCode) async {
+        guard currency != ledger.currency else { return }
+        let previous = ledger.currency
+        ledger.currency = currency
+        await perform(rollback: { [weak self] in
+            self?.ledger.currency = previous
+        }) { [repository] in
+            try await repository.setCurrency(currency)
+        }
+    }
+
     // MARK: - Служебное
 
     func dismissOperationError() {
@@ -139,5 +163,6 @@ final class LedgerStore {
             rollback()
             operationError = L.Error.saveFailed
         }
+        await refreshPendingCount()
     }
 }
