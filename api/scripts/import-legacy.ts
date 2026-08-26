@@ -15,9 +15,11 @@
 import { readFileSync } from 'node:fs'
 import { Prisma, PrismaClient } from '@prisma/client'
 import {
+	exclusionReason,
 	mapExpense,
 	mapSource,
 	pickCurrency,
+	stableUUID,
 	unwrapExport,
 	validateExport,
 	type LegacyProject
@@ -37,7 +39,9 @@ function preview(projects: LegacyProject[]): void {
 
 	for (const project of projects) {
 		const source = mapSource(project)
-		const expenses = project.expenses.map(mapExpense)
+		const kept = project.expenses.filter(e => !exclusionReason(e.id))
+		const skipped = project.expenses.filter(e => exclusionReason(e.id))
+		const expenses = kept.map(mapExpense)
 		const groups = expenses.filter(e => e.amount === null)
 
 		console.log(`Источник «${source.name}» — ${source.role || 'должность не указана'}`)
@@ -59,6 +63,11 @@ function preview(projects: LegacyProject[]): void {
 		if (months.length > 0) {
 			console.log(`   период трат: ${months[0]} … ${months[months.length - 1]}`)
 		}
+
+		for (const expense of skipped) {
+			console.log(`   ⨯ пропущено: ${expense.date}  ${expense.amount} — ${expense.title}`)
+			console.log(`     причина: ${exclusionReason(expense.id)}`)
+		}
 		console.log()
 	}
 }
@@ -74,6 +83,7 @@ async function write(projects: LegacyProject[]): Promise<void> {
 	let sourceCount = 0
 	let expenseCount = 0
 	let itemCount = 0
+	let skippedCount = 0
 
 	for (const project of projects) {
 		const source = mapSource(project)
@@ -98,6 +108,16 @@ async function write(projects: LegacyProject[]): Promise<void> {
 		sourceCount += 1
 
 		for (const legacyExpense of project.expenses) {
+			// Исключённая запись не просто пропускается: если её занёс прошлый
+			// запуск, её надо убрать — иначе исключение ни на что не влияет.
+			if (exclusionReason(legacyExpense.id)) {
+				const excludedId = stableUUID(`expense:${legacyExpense.id}`)
+				await prisma.expenseItem.deleteMany({ where: { expenseId: excludedId } })
+				await prisma.expense.deleteMany({ where: { id: excludedId } })
+				skippedCount += 1
+				continue
+			}
+
 			const expense = mapExpense(legacyExpense)
 			// Траты перестают принадлежать источнику: они личные.
 			const fields = {
@@ -130,7 +150,10 @@ async function write(projects: LegacyProject[]): Promise<void> {
 		}
 	}
 
-	console.log(`Перенесено: источников ${sourceCount}, трат ${expenseCount}, позиций ${itemCount}`)
+	console.log(
+		`Перенесено: источников ${sourceCount}, трат ${expenseCount}, позиций ${itemCount}` +
+		(skippedCount > 0 ? `, пропущено ${skippedCount}` : '')
+	)
 	console.log(`Валюта: ${currency}`)
 	console.log('\nСверьте контрольные цифры за август 2026 в приложении:')
 	console.log('  «Оклад» и «Потрачено» меняться не должны;')

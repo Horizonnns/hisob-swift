@@ -9,7 +9,9 @@
 import assert from 'node:assert/strict'
 import {
 	CATEGORY_KEYS,
+	EXCLUDED_EXPENSES,
 	day,
+	exclusionReason,
 	mapExpense,
 	mapSource,
 	pickCurrency,
@@ -146,6 +148,24 @@ check('Неполный проект в выгрузке называется п
 		() => validateExport([{ ...asrmall, expenses: undefined as never }]),
 		/asrmall.*expenses/s
 	)
+})
+
+check('Искусственная запись помечена исключением с причиной', () => {
+	const id = 'cmsumhcu00135l3040xdv8bbq'
+	const reason = exclusionReason(id)
+	assert.ok(reason, 'запись должна быть в списке исключений')
+	assert.match(reason, /9 980|остаток/, 'причина должна объяснять, почему запись искусственная')
+})
+
+check('Обычная запись не исключается', () => {
+	assert.equal(exclusionReason('clx1'), null)
+	assert.equal(exclusionReason(''), null)
+})
+
+check('У каждого исключения указана причина', () => {
+	for (const [id, reason] of Object.entries(EXCLUDED_EXPENSES)) {
+		assert.ok(reason.length > 20, `исключение ${id} без внятной причины`)
+	}
 })
 
 let failed = 0
