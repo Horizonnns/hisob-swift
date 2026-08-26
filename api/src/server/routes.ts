@@ -1,5 +1,6 @@
 import type { Hono } from 'hono'
 import { expenseToDTO, sourceToDTO } from './lib/dto.js'
+import { isDatabaseUnavailable } from './lib/errors.js'
 import { ERROR_MESSAGES } from './lib/http.js'
 import { dateFromString, moneyFromString } from './lib/money.js'
 import { prisma } from './lib/prisma.js'
@@ -21,6 +22,39 @@ export function registerRoutes(app: Hono): Hono {
 
 	// Всё остальное — только с токеном.
 	app.use('/api/*', requireToken)
+
+	/**
+	 * Диагностика настройки. Отвечает на вопрос «что именно не готово».
+	 *
+	 * Значения переменных не раскрываются — только сам факт, что они заданы.
+	 * Роут за токеном: посторонним знать состав конфигурации незачем.
+	 */
+	app.get('/api/diagnostics', async c => {
+		const env = {
+			POSTGRES_PRISMA_URL: Boolean(process.env.POSTGRES_PRISMA_URL),
+			POSTGRES_URL_NON_POOLING: Boolean(process.env.POSTGRES_URL_NON_POOLING),
+			HISOB_API_TOKEN: Boolean(process.env.HISOB_API_TOKEN)
+		}
+
+		let database = 'unreachable'
+		let migrations = 'unknown'
+
+		try {
+			await prisma.$queryRaw`SELECT 1`
+			database = 'connected'
+			try {
+				await prisma.settings.count()
+				migrations = 'applied'
+			} catch {
+				// Соединение есть, а таблиц нет — не выполнен migrate deploy.
+				migrations = 'missing'
+			}
+		} catch (cause) {
+			database = isDatabaseUnavailable(cause) ? 'unreachable' : 'error'
+		}
+
+		return c.json({ env, database, migrations })
+	})
 
 	/**
 	 * Полный срез данных.
@@ -183,6 +217,13 @@ export function registerRoutes(app: Hono): Hono {
 
 	app.onError((cause, c) => {
 		console.error('API error:', cause)
+
+		// База недоступна или не настроена — говорим об этом прямо: на этапе
+		// настройки иначе не отличить от поломки сервера, а секретов в этом нет.
+		if (isDatabaseUnavailable(cause)) {
+			return c.json({ error: ERROR_MESSAGES.databaseUnavailable }, 503)
+		}
+
 		return c.json({ error: ERROR_MESSAGES.internal }, 500)
 	})
 

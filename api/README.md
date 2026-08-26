@@ -14,6 +14,7 @@ Bun — приложение работает по HTTP и о платформе
 | Метод | Путь | Назначение |
 |---|---|---|
 | GET | `/api/health` | проверка живости, публичный |
+| GET | `/api/diagnostics` | что из настройки не готово: переменные, база, миграции |
 | GET | `/api/ledger` | полный срез: валюта, источники, траты |
 | POST | `/api/expenses` | создать трату (`id` присылает клиент) |
 | PATCH | `/api/expenses/:id` | изменить трату |
@@ -86,7 +87,32 @@ POSTGRES_URL_NON_POOLING="<direct-url>" npx prisma migrate deploy
 оставлять базу в изменённом состоянии.
 
 6. Проверить: `curl https://<домен>/api/health` → `{"ok":true}`,
-   затем `curl -H "Authorization: Bearer <токен>" https://<домен>/api/ledger`.
+   затем диагностику:
+
+```bash
+curl -H "Authorization: Bearer <токен>" https://<домен>/api/diagnostics
+```
+
+Готовое состояние выглядит так:
+
+```json
+{
+  "env": { "POSTGRES_PRISMA_URL": true, "POSTGRES_URL_NON_POOLING": true, "HISOB_API_TOKEN": true },
+  "database": "connected",
+  "migrations": "applied"
+}
+```
+
+Что означают отклонения:
+
+| Признак | Что делать |
+|---|---|
+| `POSTGRES_*: false` | переменные не заданы или названы иначе — добавить с нужными именами |
+| `database: "unreachable"` | неверные учётные данные или недоступен хост |
+| `migrations: "missing"` | соединение есть, таблиц нет — выполнить `prisma migrate deploy` |
+
+Ответы самих роутов: 503 — переменная токена не задана либо база недоступна,
+401 — токен не совпал, 200 — всё готово.
 
 ### Точка входа
 

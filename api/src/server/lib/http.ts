@@ -5,6 +5,7 @@
  */
 export const ERROR_MESSAGES = {
 	internal: 'Internal error',
+	databaseUnavailable: 'Database is unreachable or not configured',
 	unauthorized: 'Unauthorized',
 	tokenNotConfigured: 'HISOB_API_TOKEN is not configured',
 	invalidBody: 'Invalid body'
