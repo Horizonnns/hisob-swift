@@ -1,12 +1,16 @@
 import { handle } from 'hono/vercel'
-import { app } from './app.js'
+import { app } from './server/app.js'
 
 /**
- * Точка входа для Vercel.
+ * Единственная точка входа для платформы.
  *
- * Именно `handle(app)`, а не сам `app`: рантайм ожидает от default-экспорта
- * функцию-обработчик, а экземпляр Hono — объект. На объект платформа отвечает
- * `Invalid export` и падает с `FUNCTION_INVOCATION_FAILED` на любом запросе.
- * Адаптер оборачивает приложение в `(req) => app.fetch(req)`.
+ * В корне `src/` намеренно нет других файлов: Vercel считает точкой входа
+ * каждый файл верхнего уровня и требует от него default-экспорт в виде
+ * функции. Раньше рядом лежал `app.ts` с одним лишь именованным экспортом —
+ * платформа отвечала `Invalid export found in module ".../src/app.js"` и
+ * падала с `FUNCTION_INVOCATION_FAILED` на любом запросе.
+ *
+ * `handle(app)` оборачивает приложение в `(req) => app.fetch(req)` —
+ * рантайм ждёт функцию, а не экземпляр Hono.
  */
 export default handle(app)
