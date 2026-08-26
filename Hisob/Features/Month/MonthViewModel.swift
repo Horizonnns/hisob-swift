@@ -5,44 +5,35 @@ import Observation
 @MainActor
 @Observable
 final class MonthViewModel {
-    enum State: Equatable {
-        case loading
-        case loaded
-        case failed(String)
-    }
-
-    private let repository: any LedgerRepository
+    private let store: LedgerStore
     private let calculator: LedgerCalculator
     private let calendar: Calendar
-
-    private(set) var state: State = .loading
-    private(set) var ledger = Ledger()
-    /// Сообщение о неудавшейся операции; показывается баннером и гасится само.
-    private(set) var operationError: String?
 
     var month: YearMonth
     var query = ExpenseQuery()
 
-    init(
-        repository: any LedgerRepository,
-        calendar: Calendar = .current,
-        month: YearMonth? = nil
-    ) {
-        self.repository = repository
+    init(store: LedgerStore, calendar: Calendar = .current, month: YearMonth? = nil) {
+        self.store = store
         self.calendar = calendar
         self.calculator = LedgerCalculator(calendar: calendar)
         self.month = month ?? YearMonth.current(calendar: calendar)
     }
 
+    // MARK: - Состояние
+
+    var state: LedgerStore.State { store.state }
+    var currency: CurrencyCode { store.ledger.currency }
+    var operationError: String? { store.operationError }
+
     // MARK: - Производные значения
 
     var summary: MonthSummary {
-        calculator.summary(ledger, for: month)
+        calculator.summary(store.ledger, for: month)
     }
 
     /// Все траты месяца — по ним считается статистика и счётчики категорий.
     var monthExpenses: [Expense] {
-        ledger.expenses(in: month, calendar: calendar)
+        store.ledger.expenses(in: month, calendar: calendar)
     }
 
     /// Траты после фильтра — их видит пользователь.
@@ -64,25 +55,19 @@ final class MonthViewModel {
     /// Перенос показывается только когда он есть — как в веб-версии.
     var showsCarryover: Bool { summary.carryover > .zero }
 
-    // MARK: - Загрузка
+    // MARK: - Действия
 
     func load() async {
-        state = .loading
-        do {
-            ledger = try await repository.load()
-            state = .loaded
-        } catch {
-            state = .failed(error.localizedDescription)
-        }
+        await store.loadIfNeeded()
     }
 
-    // MARK: - Навигация по месяцам
+    func reload() async {
+        await store.load()
+    }
 
     func goToPreviousMonth() { month = month.adding(months: -1) }
     func goToNextMonth() { month = month.adding(months: 1) }
     func goToCurrentMonth() { month = YearMonth.current(calendar: calendar) }
-
-    // MARK: - Фильтры
 
     func toggleCategory(_ category: ExpenseCategory) {
         if query.categories.contains(category) {
@@ -102,45 +87,27 @@ final class MonthViewModel {
         clearFilters()
     }
 
-    // MARK: - Изменения
-
     func addExpense(
         amount: Money,
         category: ExpenseCategory,
         date: Date,
         title: String
     ) async {
-        let expense = Expense.single(
-            date: date,
-            category: category,
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-            amount: amount
+        await store.add(
+            .single(
+                date: date,
+                category: category,
+                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                amount: amount
+            )
         )
-
-        // Оптимистично: список обновляется сразу, ожидание записи не блокирует UI.
-        ledger.expenses.append(expense)
-        do {
-            try await repository.add(expense)
-        } catch {
-            // Откат. В веб-версии его не было — при неудачном сохранении
-            // на экране оставалось то, чего в базе нет.
-            ledger.expenses.removeAll { $0.id == expense.id }
-            operationError = L.Error.saveFailed
-        }
     }
 
     func deleteExpense(_ expense: Expense) async {
-        guard let index = ledger.expenses.firstIndex(where: { $0.id == expense.id }) else { return }
-        let removed = ledger.expenses.remove(at: index)
-        do {
-            try await repository.delete(expenseID: removed.id)
-        } catch {
-            ledger.expenses.insert(removed, at: index)
-            operationError = L.Error.saveFailed
-        }
+        await store.delete(expense)
     }
 
     func dismissOperationError() {
-        operationError = nil
+        store.dismissOperationError()
     }
 }

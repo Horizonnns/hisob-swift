@@ -142,7 +142,7 @@ struct MonthView: View {
         case .failed(let message):
             Section {
                 ErrorStateView(message: message) {
-                    Task { await viewModel.load() }
+                    Task { await viewModel.reload() }
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -158,7 +158,7 @@ struct MonthView: View {
             } else {
                 Section {
                     ForEach(viewModel.visibleExpenses) { expense in
-                        ExpenseRow(expense: expense, currency: viewModel.ledger.currency,
+                        ExpenseRow(expense: expense, currency: viewModel.currency,
                                    expandedIDs: $expandedIDs)
                             .listRowBackground(Color.clear)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
