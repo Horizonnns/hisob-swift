@@ -14,8 +14,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "npm run db:check && prisma migrate deploy",
+    "db:status": "tsx --env-file-if-exists=.env scripts/db-status.ts",
     "db:studio": "prisma studio",
-    "import:legacy": "tsx scripts/import-legacy.ts",
+    "import:legacy": "tsx --env-file-if-exists=.env scripts/import-legacy.ts",
     "db:check": "node --env-file-if-exists=.env scripts/check-db-env.mjs"
   },
   "dependencies": {
