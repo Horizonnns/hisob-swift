@@ -77,7 +77,7 @@ public struct HisobAPIClient: Sendable {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            (data, response) = try await send(request)
         } catch {
             throw APIError.transport(error.localizedDescription)
         }
@@ -99,6 +99,30 @@ public struct HisobAPIClient: Sendable {
         } catch {
             throw APIError.decoding(error.localizedDescription)
         }
+    }
+
+    /// Отправляет запрос, повторяя один раз при обрыве соединения.
+    ///
+    /// Сервер и промежуточные узлы закрывают простаивающие keep-alive
+    /// соединения, а `URLSession` успевает переиспользовать уже закрытое —
+    /// запрос падает с `networkConnectionLost`. Идемпотентные GET система
+    /// повторяет сама, а POST/PUT/PATCH/DELETE — нет.
+    ///
+    /// Наши записи идемпотентны по построению: идентификатор задаёт клиент,
+    /// PUT перезаписывает целиком, повторный POST отвечает 409. Поэтому
+    /// повтор безопасен.
+    private func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            return try await session.data(for: request)
+        } catch let error as URLError where Self.isRetryable(error) {
+            try await Task.sleep(for: .milliseconds(300))
+            return try await session.data(for: request)
+        }
+    }
+
+    private static func isRetryable(_ error: URLError) -> Bool {
+        [.networkConnectionLost, .timedOut, .cannotConnectToHost, .dnsLookupFailed]
+            .contains(error.code)
     }
 
     private func mapFailure(status: Int, data: Data) -> APIError {

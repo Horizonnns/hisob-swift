@@ -34,11 +34,19 @@ public actor OfflineFirstLedgerRepository: LedgerRepository {
         await queue.count
     }
 
-    public func load() async throws -> Ledger {
-        // Сначала пробуем разгрузить очередь: иначе сервер вернёт состояние
-        // без наших правок и снимок откатится назад.
+    /// Отправляет накопленное и сообщает, опустела ли очередь.
+    /// Вызывается явно — кнопкой повтора в настройках.
+    @discardableResult
+    public func flushPending() async -> Bool {
         try? await queue.flush(to: remote)
+        return await queue.isEmpty
+    }
 
+    public func load() async throws -> Ledger {
+        // Чтение не отправляет очередь: неудачная отправка упиралась
+        // в таймаут и задерживала показ данных. Отправкой распоряжается
+        // вызывающая сторона через `flushPending()` — она знает, ждать
+        // результата или нет.
         do {
             let fresh = try await remote.load()
             await snapshots.save(fresh)

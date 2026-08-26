@@ -115,8 +115,7 @@ struct SettingsView: View {
     /// Без него молчаливая очередь выглядела бы как потеря данных.
     private var pendingRow: some View {
         Button {
-            // Повторная загрузка сначала разгружает очередь.
-            Task { await store.load() }
+            Task { await store.flushPending() }
         } label: {
             pendingRowContent
         }

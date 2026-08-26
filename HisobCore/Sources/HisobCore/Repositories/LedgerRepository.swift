@@ -20,6 +20,15 @@ public protocol LedgerRepository: Sendable {
     func delete(sourceID: IncomeSource.ID) async throws
 
     func setCurrency(_ currency: CurrencyCode) async throws
+
+    /// Отправляет то, что не удалось записать раньше.
+    /// Возвращает, опустела ли очередь.
+    func flushPending() async -> Bool
+}
+
+extension LedgerRepository {
+    /// Хранилищам без очереди отправлять нечего.
+    public func flushPending() async -> Bool { true }
 }
 
 /// Ошибки хранилища.

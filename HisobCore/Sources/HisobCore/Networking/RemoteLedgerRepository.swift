@@ -30,7 +30,7 @@ public struct RemoteLedgerRepository: LedgerRepository {
 
     public func update(_ expense: Expense) async throws {
         _ = try await client.send(
-            "/api/expenses/\(expense.id.uuidString)",
+            "/api/expenses/\(expense.id.wirePath)",
             method: "PATCH",
             body: ExpenseDTO(expense, calendar: calendar),
             as: ExpenseDTO.self
@@ -38,12 +38,12 @@ public struct RemoteLedgerRepository: LedgerRepository {
     }
 
     public func delete(expenseID: Expense.ID) async throws {
-        try await client.send("/api/expenses/\(expenseID.uuidString)", method: "DELETE")
+        try await client.send("/api/expenses/\(expenseID.wirePath)", method: "DELETE")
     }
 
     public func save(_ source: IncomeSource) async throws {
         _ = try await client.send(
-            "/api/sources/\(source.id.uuidString)",
+            "/api/sources/\(source.id.wirePath)",
             method: "PUT",
             body: IncomeSourceDTO(source, calendar: calendar),
             as: IncomeSourceDTO.self
@@ -51,7 +51,7 @@ public struct RemoteLedgerRepository: LedgerRepository {
     }
 
     public func delete(sourceID: IncomeSource.ID) async throws {
-        try await client.send("/api/sources/\(sourceID.uuidString)", method: "DELETE")
+        try await client.send("/api/sources/\(sourceID.wirePath)", method: "DELETE")
     }
 
     public func setCurrency(_ currency: CurrencyCode) async throws {

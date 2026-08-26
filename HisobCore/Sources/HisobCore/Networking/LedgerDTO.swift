@@ -11,7 +11,7 @@ struct LedgerDTO: Codable, Sendable {
 }
 
 struct IncomeSourceDTO: Codable, Sendable {
-    var id: UUID
+    var id: WireUUID
     var name: String
     var role: String
     /// «2026-07» либо null.
@@ -20,24 +20,24 @@ struct IncomeSourceDTO: Codable, Sendable {
 }
 
 struct SalaryEntryDTO: Codable, Sendable {
-    var id: UUID
+    var id: WireUUID
     var effectiveFrom: String
     var amount: String
 }
 
 struct ExpenseDTO: Codable, Sendable {
-    var id: UUID
+    var id: WireUUID
     var date: String
     var category: String
     var title: String
     /// Заполнено — одиночная трата; null — группа.
     var amount: String?
     var items: [ExpenseItemDTO]
-    var incomeSourceId: UUID?
+    var incomeSourceId: WireUUID?
 }
 
 struct ExpenseItemDTO: Codable, Sendable {
-    var id: UUID
+    var id: WireUUID
     var amount: String
     var title: String
 }
@@ -46,11 +46,11 @@ struct ExpenseItemDTO: Codable, Sendable {
 
 extension ExpenseDTO {
     init(_ expense: Expense, calendar: Calendar) {
-        self.id = expense.id
+        self.id = WireUUID(expense.id)
         self.date = DayString.string(from: expense.date, calendar: calendar)
         self.category = expense.category.rawValue
         self.title = expense.title
-        self.incomeSourceId = expense.incomeSourceID
+        self.incomeSourceId = expense.incomeSourceID.map(WireUUID.init)
 
         switch expense.kind {
         case .single(let amount):
@@ -59,7 +59,7 @@ extension ExpenseDTO {
         case .group(let items):
             self.amount = nil
             self.items = items.map {
-                ExpenseItemDTO(id: $0.id, amount: MoneyWire.string($0.amount), title: $0.title)
+                ExpenseItemDTO(id: WireUUID($0.id), amount: MoneyWire.string($0.amount), title: $0.title)
             }
         }
     }
@@ -67,13 +67,13 @@ extension ExpenseDTO {
 
 extension IncomeSourceDTO {
     init(_ source: IncomeSource, calendar: Calendar) {
-        self.id = source.id
+        self.id = WireUUID(source.id)
         self.name = source.name
         self.role = source.role
         self.endedAt = source.endedAt?.description
         self.salaries = source.sortedHistory().map {
             SalaryEntryDTO(
-                id: $0.id,
+                id: WireUUID($0.id),
                 effectiveFrom: DayString.string(from: $0.effectiveFrom, calendar: calendar),
                 amount: MoneyWire.string($0.amount)
             )
@@ -108,16 +108,16 @@ extension ExpenseDTO {
         case (nil, false):
             kind = .group(try items.map { try $0.toDomain() })
         default:
-            throw DTOMappingError.ambiguousExpenseKind(id)
+            throw DTOMappingError.ambiguousExpenseKind(id.value)
         }
 
         return Expense(
-            id: id,
+            id: id.value,
             date: date,
             category: ExpenseCategory(rawValue: category),
             title: title,
             kind: kind,
-            incomeSourceID: incomeSourceId
+            incomeSourceID: incomeSourceId?.value
         )
     }
 }
@@ -127,7 +127,7 @@ extension ExpenseItemDTO {
         guard let value = Money.parse(amount) else {
             throw DTOMappingError.invalidAmount(amount)
         }
-        return ExpenseItem(id: id, amount: value, title: title)
+        return ExpenseItem(id: id.value, amount: value, title: title)
     }
 }
 
@@ -139,7 +139,7 @@ extension SalaryEntryDTO {
         guard let value = Money.parse(amount) else {
             throw DTOMappingError.invalidAmount(amount)
         }
-        return SalaryEntry(id: id, effectiveFrom: date, amount: value)
+        return SalaryEntry(id: id.value, effectiveFrom: date, amount: value)
     }
 }
 
@@ -153,7 +153,7 @@ extension IncomeSourceDTO {
             ended = month
         }
         return IncomeSource(
-            id: id,
+            id: id.value,
             name: name,
             role: role,
             salaryHistory: try salaries.map { try $0.toDomain(calendar: calendar) },

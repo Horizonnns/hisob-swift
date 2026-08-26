@@ -99,7 +99,7 @@ struct NetworkingTests {
 
             let body = try #require(request.httpBody)
             let sent = try JSONDecoder().decode(ExpenseDTO.self, from: body)
-            #expect(sent.id == expense.id)
+            #expect(sent.id.value == expense.id)
             #expect(sent.amount == "13")
             #expect(sent.items.isEmpty)
             #expect(sent.date == "2026-08-02")
@@ -133,7 +133,7 @@ struct NetworkingTests {
 
             let request = try #require(MockURLProtocol.recorded.first)
             #expect(request.httpMethod == "DELETE")
-            #expect(request.url?.path == "/api/expenses/\(id.uuidString)")
+            #expect(request.url?.path == "/api/expenses/\(id.wirePath)")
         }
 
         @Test("Источник сохраняется PUT вместе с историей оклада")
@@ -149,12 +149,36 @@ struct NetworkingTests {
 
             let request = try #require(MockURLProtocol.recorded.first)
             #expect(request.httpMethod == "PUT")
-            #expect(request.url?.path == "/api/sources/\(source.id.uuidString)")
+            #expect(request.url?.path == "/api/sources/\(source.id.wirePath)")
 
             let sent = try JSONDecoder().decode(IncomeSourceDTO.self, from: #require(request.httpBody))
             #expect(sent.endedAt == "2026-12")
             #expect(sent.salaries.first?.effectiveFrom == "2026-06-10")
             #expect(sent.salaries.first?.amount == "9980")
+        }
+
+        @Test("Идентификаторы уходят в нижнем регистре — и в пути, и в теле")
+        func identifiersAreLowercased() async throws {
+            // UUID.uuidString в Swift прописной, а идентификаторы в базе строчные.
+            // PostgreSQL сравнивает строки с учётом регистра: прописной запрос
+            // не нашёл бы запись и создал дубликат вместо изменения.
+            MockURLProtocol.reset(with: [.ok("{}")])
+            let source = IncomeSource(
+                name: "OD",
+                salaryHistory: [salary("9980", from: day(2026, 6, 10))]
+            )
+            _ = try? await makeRemoteRepository().save(source)
+
+            let request = try #require(MockURLProtocol.recorded.first)
+            let path = try #require(request.url?.path)
+            #expect(path == path.lowercased(), "путь содержит прописные символы: \(path)")
+
+            let body = try #require(request.httpBody)
+            let json = try #require(String(data: body, encoding: .utf8))
+            let sent = try JSONDecoder().decode(IncomeSourceDTO.self, from: body)
+            #expect(json.contains(sent.id.wireValue), "идентификатор в теле должен быть строчным")
+            #expect(sent.id.wireValue == sent.id.wireValue.lowercased())
+            #expect(sent.salaries.allSatisfy { $0.id.wireValue == $0.id.wireValue.lowercased() })
         }
 
         @Test("Статусы отображаются в осмысленные ошибки")
@@ -326,9 +350,14 @@ struct NetworkingTests {
             try await repository.add(expense("100", on: day(2026, 8, 20), title: "офлайн"))
             #expect(await queue.count == 1)
 
-            // Связь вернулась: сначала уходит очередь, потом читается свежее.
-            MockURLProtocol.reset(with: [.ok("{}", status: 201), .ok(ledgerJSON)])
+            // Связь вернулась. Чтение очередь не трогает — она уходит
+            // отдельным вызовом, чтобы неудачная отправка не задерживала показ.
+            MockURLProtocol.reset(with: [.ok(ledgerJSON)])
             _ = try await repository.load()
+            #expect(await queue.count == 1, "чтение не должно отправлять очередь")
+
+            MockURLProtocol.reset(with: [.ok("{}", status: 201)])
+            #expect(await repository.flushPending())
             #expect(await queue.isEmpty)
         }
 

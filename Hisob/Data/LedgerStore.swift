@@ -41,6 +41,22 @@ final class LedgerStore {
             state = .failed(error.localizedDescription)
         }
         await refreshPendingCount()
+
+        // Отправку накопленного не ждём: она не должна задерживать показ.
+        if pendingCount > 0 {
+            Task { await flushPending() }
+        }
+    }
+
+    /// Отправляет накопленное и обновляет счётчик. Вызывается кнопкой повтора.
+    func flushPending() async {
+        guard pendingCount > 0 else { return }
+        _ = await repository.flushPending()
+        await refreshPendingCount()
+        if pendingCount == 0 {
+            // Очередь ушла — перечитываем, чтобы показать то, что на сервере.
+            await load()
+        }
     }
 
     private func refreshPendingCount() async {
@@ -50,6 +66,8 @@ final class LedgerStore {
         }
         pendingCount = await offline.pendingCount()
     }
+
+    var hasPendingChanges: Bool { pendingCount > 0 }
 
     /// Первая загрузка; повторные вызовы (например, при возврате на экран)
     /// данные не перечитывают.
