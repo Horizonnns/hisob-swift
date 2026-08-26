@@ -1,9 +1,10 @@
 .DS_Store
+# Проект генерируется из project.yml: `xcodegen generate`
 *.xcodeproj
 *.xcworkspace
-!*.xcodeproj/project.pbxproj
 xcuserdata/
 DerivedData/
+.build-dd/
 .build/
 .swiftpm/
 *.hmap
