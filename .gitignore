@@ -16,3 +16,8 @@ node_modules/
 *.tsbuildinfo
 .vercel
 legacy-export.json
+
+# секреты: строки подключения и токен
+.env
+.env.*
+!.env.example
