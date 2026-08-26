@@ -332,6 +332,31 @@ struct NetworkingTests {
             #expect(await queue.isEmpty)
         }
 
+        @Test("Изменение источника без сети видно в списке до отправки")
+        func queuedSourceChangeIsVisible() async throws {
+            let (snapshots, queue, directory) = try makeStores()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let repository = makeRepository(snapshots, queue)
+
+            MockURLProtocol.reset(with: [.ok(ledgerJSON)])
+            let before = try await repository.load()
+            var od = try #require(before.sources.first { $0.name == "OD" })
+            #expect(od.endedAt == nil)
+
+            // Завершаем работу без связи.
+            od.endedAt = ym(2026, 8)
+            MockURLProtocol.reset(with: [.offline()])
+            try await repository.save(od)
+            #expect(await queue.count == 1)
+
+            // Читаем снова: сервер по-прежнему отдаёт старое состояние,
+            // но неотправленное изменение должно быть наложено сверху.
+            MockURLProtocol.reset(with: [.offline(), .ok(ledgerJSON)])
+            let after = try await repository.load()
+            let stored = try #require(after.sources.first { $0.name == "OD" })
+            #expect(stored.endedAt == ym(2026, 8), "неотправленное завершение работы должно быть видно")
+        }
+
         @Test("Очередь переживает перезапуск приложения")
         func queueSurvivesRestart() async throws {
             let (snapshots, queue, directory) = try makeStores()

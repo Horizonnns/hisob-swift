@@ -114,6 +114,17 @@ struct SettingsView: View {
     /// Видимый признак того, что часть изменений ещё не на сервере.
     /// Без него молчаливая очередь выглядела бы как потеря данных.
     private var pendingRow: some View {
+        Button {
+            // Повторная загрузка сначала разгружает очередь.
+            Task { await store.load() }
+        } label: {
+            pendingRowContent
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color.clear)
+    }
+
+    private var pendingRowContent: some View {
         HStack(spacing: DS.Spacing.m) {
             Image(systemName: "arrow.up.circle.dotted")
                 .foregroundStyle(DS.Palette.carryover)
@@ -131,10 +142,15 @@ struct SettingsView: View {
             Text("\(store.pendingCount)")
                 .font(DS.Typography.amountCompact)
                 .foregroundStyle(DS.Palette.carryover)
+
+            Image(systemName: "arrow.clockwise")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, DS.Spacing.xs)
-        .listRowBackground(Color.clear)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
+        .accessibilityHint(L.Settings.pendingRetry)
     }
 
     private var connectionRow: some View {

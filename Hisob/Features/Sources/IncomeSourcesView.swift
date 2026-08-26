@@ -87,10 +87,24 @@ struct IncomeSourcesView: View {
             }
         }
         .task { await viewModel.load() }
+        .refreshable { await viewModel.reload() }
     }
+
+    /// «Август 2026» — для подписи о завершении.
+    private func monthName(_ month: YearMonth) -> String {
+        Self.monthFormatter.string(from: month.startDate()).capitalizedFirst
+    }
+
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter
+    }()
 
     private func row(_ source: IncomeSource) -> some View {
         let isActive = viewModel.isActiveNow(source)
+        let isEnding = viewModel.isEnding(source)
         let salary = viewModel.currentSalary(source)
 
         return Button {
@@ -112,13 +126,21 @@ struct IncomeSourcesView: View {
                             .font(DS.Typography.body)
                             .lineLimit(1)
 
-                        if !isActive {
-                            Text(L.Sources.endedBadge)
+                        if let endedAt = source.endedAt {
+                            // Для ещё не наступившего окончания подпись другая:
+                            // «Завершён» о работе, которая платит в этом месяце,
+                            // было бы неправдой.
+                            Text(isActive
+                                ? "\(L.Sources.endingBadge) \(monthName(endedAt))"
+                                : L.Sources.endedBadge)
                                 .font(.system(size: 10, weight: .bold))
                                 .padding(.horizontal, DS.Spacing.s)
                                 .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.18), in: Capsule())
-                                .foregroundStyle(.secondary)
+                                .background(
+                                    (isActive ? DS.Palette.carryover : Color.secondary).opacity(0.18),
+                                    in: Capsule()
+                                )
+                                .foregroundStyle(isActive ? DS.Palette.carryover : .secondary)
                         }
                     }
 

@@ -48,6 +48,9 @@ struct MonthView: View {
             }
         }
         .task { await viewModel.load() }
+        // Полная перезагрузка: заодно отправляет накопленную очередь.
+        // Без неё неотправленные изменения ждали бы перезапуска приложения.
+        .refreshable { await viewModel.reload() }
         .onChange(of: viewModel.month) { _, _ in viewModel.monthDidChange() }
         .sensoryFeedback(.success, trigger: viewModel.monthExpenses.count)
         .overlay(alignment: .bottom) { errorBanner }

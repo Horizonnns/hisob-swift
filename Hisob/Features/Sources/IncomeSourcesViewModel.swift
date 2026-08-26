@@ -39,6 +39,13 @@ final class IncomeSourcesViewModel {
         source.salary(in: YearMonth.current(calendar: calendar), calendar: calendar)
     }
 
+    /// Помечен ли источник как завершающийся — независимо от того, прошёл ли
+    /// последний месяц. Иначе источник, завершённый текущим месяцем, выглядит
+    /// в точности как бессрочный, и правка кажется несохранившейся.
+    func isEnding(_ source: IncomeSource) -> Bool {
+        source.endedAt != nil
+    }
+
     /// Последний назначенный оклад — показывается для завершённых источников.
     func lastSalary(_ source: IncomeSource) -> Money? {
         source.sortedHistory().last?.amount

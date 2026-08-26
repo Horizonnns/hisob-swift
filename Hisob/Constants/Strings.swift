@@ -53,6 +53,7 @@ enum L {
         static let ended = "Работа завершена"
         static let endedAt = "Последний месяц"
         static let endedBadge = "Завершён"
+        static let endingBadge = "По"
         static let currentSalary = "Текущий оклад"
         static let noSalary = "Оклад не задан"
         static let lastSalary = "последний"
@@ -77,7 +78,8 @@ enum L {
         static let exportSubtitle = "Выгрузить всё в файл"
         static let exportFooter = "Копия, не зависящая ни от сервера, ни от устройства. Держите её где-нибудь отдельно."
         static let pendingChanges = "Не отправлено"
-        static let pendingChangesFooter = "Изменения сохранены на устройстве и уйдут на сервер, когда появится связь."
+        static let pendingChangesFooter = "Сохранено на устройстве. Нажмите, чтобы отправить сейчас."
+        static let pendingRetry = "Отправить сейчас"
     }
 
     enum Connection {
