@@ -18,16 +18,16 @@ import {
 	mapExpense,
 	mapSource,
 	pickCurrency,
+	unwrapExport,
+	validateExport,
 	type LegacyProject
 } from '../src/server/lib/legacy.js'
 
 const prisma = new PrismaClient()
 
 function readExport(path: string): LegacyProject[] {
-	const projects = JSON.parse(readFileSync(path, 'utf8')) as LegacyProject[]
-	if (!Array.isArray(projects) || projects.length === 0) {
-		throw new Error('Выгрузка пуста или не является массивом проектов')
-	}
+	const projects = unwrapExport(JSON.parse(readFileSync(path, 'utf8')))
+	validateExport(projects)
 	return projects
 }
 

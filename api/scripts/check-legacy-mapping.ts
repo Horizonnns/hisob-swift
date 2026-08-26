@@ -14,6 +14,8 @@ import {
 	mapSource,
 	pickCurrency,
 	stableUUID,
+	unwrapExport,
+	validateExport,
 	type LegacyProject
 } from '../src/server/lib/legacy.js'
 
@@ -122,6 +124,28 @@ check('Дата не уезжает на соседний день из-за ч�
 check('Валюта берётся из первого проекта, где она задана', () => {
 	assert.equal(pickCurrency([{ ...asrmall, currency: '' }, asrmall]), 'TJS')
 	assert.equal(pickCurrency([]), 'TJS')
+})
+
+check('Развёрнутый массив проектов принимается как есть', () => {
+	assert.equal(unwrapExport([asrmall])[0]!.slug, 'asrmall')
+})
+
+check('Результат запроса с одной колонкой разворачивается', () => {
+	// Так выгрузку отдаёт Neon: строка таблицы, внутри — JSON строкой.
+	const wrapped = [{ jsonb_pretty: JSON.stringify([asrmall]) }]
+	assert.equal(unwrapExport(wrapped)[0]!.slug, 'asrmall')
+})
+
+check('Непонятная форма отвергается внятно', () => {
+	assert.throws(() => unwrapExport([]), /пуста/)
+	assert.throws(() => unwrapExport([{ foo: 1, bar: 2 }]), /Не удалось разобрать/)
+})
+
+check('Неполный проект в выгрузке называется поимённо', () => {
+	assert.throws(
+		() => validateExport([{ ...asrmall, expenses: undefined as never }]),
+		/asrmall.*expenses/s
+	)
 })
 
 let failed = 0

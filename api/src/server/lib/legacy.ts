@@ -124,6 +124,55 @@ export function mapExpense(expense: LegacyProject['expenses'][number]): MappedEx
 	}
 }
 
+/**
+ * Достаёт массив проектов из того, что отдал клиент базы.
+ *
+ * Запрос возвращает одну строку с одной колонкой, и разные клиенты
+ * оборачивают её по-разному: Neon при выгрузке в JSON отдаёт
+ * `[{ "jsonb_pretty": "[…]" }]`, где содержимое лежит строкой. Разворачиваем,
+ * чтобы не заставлять руками чистить файл.
+ */
+export function unwrapExport(raw: unknown): LegacyProject[] {
+	if (!Array.isArray(raw) || raw.length === 0) {
+		throw new Error('Выгрузка пуста или не является массивом')
+	}
+
+	const first = raw[0]
+
+	// Уже развёрнутый массив проектов.
+	if (first && typeof first === 'object' && 'slug' in first) {
+		return raw as LegacyProject[]
+	}
+
+	// Строка таблицы с единственной колонкой, внутри которой JSON строкой.
+	if (first && typeof first === 'object') {
+		const values = Object.values(first as Record<string, unknown>)
+		if (values.length === 1 && typeof values[0] === 'string') {
+			return unwrapExport(JSON.parse(values[0]))
+		}
+	}
+
+	throw new Error(
+		'Не удалось разобрать выгрузку. Ожидается массив проектов с полем "slug" ' +
+		'либо результат запроса с единственной колонкой.'
+	)
+}
+
+/** Проверяет, что в выгрузке есть всё, что нужно для переноса. */
+export function validateExport(projects: LegacyProject[]): void {
+	projects.forEach((project, index) => {
+		if (!project.slug) {
+			throw new Error(`Проект №${index + 1}: нет поля "slug"`)
+		}
+		if (!Array.isArray(project.expenses)) {
+			throw new Error(`Проект «${project.slug}»: нет массива "expenses"`)
+		}
+		if (!Array.isArray(project.salaries)) {
+			throw new Error(`Проект «${project.slug}»: нет массива "salaries"`)
+		}
+	})
+}
+
 /** Валюта одна на пользователя; берём у первого проекта, где она задана. */
 export function pickCurrency(projects: LegacyProject[]): string {
 	return projects.find(project => project.currency)?.currency ?? 'TJS'
