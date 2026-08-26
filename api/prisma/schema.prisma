@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")      // пулер — рантайм
+  directUrl = env("POSTGRES_URL_NON_POOLING") // прямое — миграции
+}
+
+/// Настройки пользователя. Строка ровно одна: приложение однопользовательское.
+model Settings {
+  id        String   @id @default("singleton")
+  currency  String   @default("TJS")
+  updatedAt DateTime @updatedAt
+}
+
+/// Место работы. Траты ему НЕ принадлежат — только история оклада.
+model IncomeSource {
+  id       String        @id
+  name     String
+  role     String        @default("")
+  /// Последний месяц с доходом, включительно, в виде «2026-07».
+  /// null — работа продолжается.
+  endedAt  String?
+  salaries SalaryEntry[]
+  expenses Expense[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SalaryEntry {
+  id            String       @id
+  source        IncomeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId      String
+  effectiveFrom DateTime     @db.Date
+  /// Decimal, а не Float: суммы складываются сотнями раз.
+  amount        Decimal      @db.Decimal(14, 2)
+
+  @@index([sourceId])
+}
+
+model Expense {
+  id       String   @id
+  date     DateTime @db.Date
+  category String
+  title    String   @default("")
+  /// Заполнено — одиночная трата. null — группа, сумма считается из позиций.
+  /// Оба поля одновременно непусты быть не могут: это проверяет API.
+  amount   Decimal? @db.Decimal(14, 2)
+
+  items ExpenseItem[]
+
+  /// Необязательная пометка «трата относится к этой работе».
+  /// При удалении источника обнуляется, сама трата остаётся.
+  source         IncomeSource? @relation(fields: [incomeSourceId], references: [id], onDelete: SetNull)
+  incomeSourceId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([incomeSourceId])
+}
+
+model ExpenseItem {
+  id        String  @id
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId String
+  amount    Decimal @db.Decimal(14, 2)
+  title     String
+
+  @@index([expenseId])
+}
