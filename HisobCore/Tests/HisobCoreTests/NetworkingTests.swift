@@ -202,87 +202,152 @@ struct NetworkingTests {
         }
     }
 
-    @Suite("Кэш поверх сети")
-    struct CachedLedgerRepositoryTests {
-        private func makeStore() throws -> (LedgerSnapshotStore, URL) {
+    @Suite("Работа без сети")
+    struct OfflineTests {
+        private func makeStores() throws -> (LedgerSnapshotStore, PendingOperationQueue, URL) {
             let directory = URL(fileURLWithPath: NSTemporaryDirectory())
-                .appendingPathComponent("hisob-tests-\(UUID().uuidString)", isDirectory: true)
+                .appendingPathComponent("hisob-offline-\(UUID().uuidString)", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let url = directory.appendingPathComponent("snapshot.json")
-            return (LedgerSnapshotStore(fileURL: url), directory)
+            return (
+                LedgerSnapshotStore(fileURL: directory.appendingPathComponent("snapshot.json")),
+                PendingOperationQueue(fileURL: directory.appendingPathComponent("queue.json")),
+                directory
+            )
         }
+
+        private func makeRepository(
+            _ snapshots: LedgerSnapshotStore,
+            _ queue: PendingOperationQueue
+        ) -> OfflineFirstLedgerRepository {
+            OfflineFirstLedgerRepository(remote: makeRemoteRepository(), snapshots: snapshots, queue: queue)
+        }
+
+        // MARK: - Чтение
 
         @Test("Успешная загрузка сохраняет снимок")
-        func savesSnapshotOnLoad() async throws {
-            let (snapshots, directory) = try makeStore()
+        func savesSnapshot() async throws {
+            let (snapshots, queue, directory) = try makeStores()
             defer { try? FileManager.default.removeItem(at: directory) }
 
             MockURLProtocol.reset(with: [.ok(ledgerJSON)])
-            let cached = CachedLedgerRepository(remote: makeRemoteRepository(), snapshots: snapshots)
-            _ = try await cached.load()
+            _ = try await makeRepository(snapshots, queue).load()
 
-            let stored = await snapshots.load()
-            #expect(stored?.expenses.count == 2)
-            #expect(stored?.sources.count == 2)
+            #expect(await snapshots.load()?.expenses.count == 2)
         }
 
-        @Test("Без сети отдаётся последний снимок")
-        func fallsBackToSnapshotOffline() async throws {
-            let (snapshots, directory) = try makeStore()
+        @Test("Без сети отдаётся снимок")
+        func fallsBackToSnapshot() async throws {
+            let (snapshots, queue, directory) = try makeStores()
             defer { try? FileManager.default.removeItem(at: directory) }
+            let repository = makeRepository(snapshots, queue)
 
-            // Первый заход — сеть есть, снимок сохранён.
             MockURLProtocol.reset(with: [.ok(ledgerJSON)])
-            let cached = CachedLedgerRepository(remote: makeRemoteRepository(), snapshots: snapshots)
-            _ = try await cached.load()
+            _ = try await repository.load()
 
-            // Второй — сети нет.
             MockURLProtocol.reset(with: [.offline()])
-            let offline = try await cached.load()
+            let offline = try await repository.load()
             #expect(offline.expenses.count == 2)
-            #expect(offline.sources.count == 2)
-            // Суммы переживают сериализацию снимка без потери точности.
             #expect(offline.expenses.first { $0.isGroup }?.total == money("1923.63"))
-        }
-
-        @Test("Без сети и без снимка ошибка пробрасывается")
-        func failsWithoutSnapshot() async throws {
-            let (snapshots, directory) = try makeStore()
-            defer { try? FileManager.default.removeItem(at: directory) }
-
-            MockURLProtocol.reset(with: [.offline()])
-            let cached = CachedLedgerRepository(remote: makeRemoteRepository(), snapshots: snapshots)
-            await #expect(throws: APIError.self) {
-                _ = try await cached.load()
-            }
         }
 
         @Test("На 401 снимок не подставляется")
         func doesNotMaskUnauthorized() async throws {
-            let (snapshots, directory) = try makeStore()
+            let (snapshots, queue, directory) = try makeStores()
             defer { try? FileManager.default.removeItem(at: directory) }
+            let repository = makeRepository(snapshots, queue)
 
             MockURLProtocol.reset(with: [.ok(ledgerJSON)])
-            let cached = CachedLedgerRepository(remote: makeRemoteRepository(), snapshots: snapshots)
-            _ = try await cached.load()
+            _ = try await repository.load()
 
-            // Токен отозвали: показывать данные дальше нельзя, даже если снимок есть.
             MockURLProtocol.reset(with: [.ok("{\"error\":\"Unauthorized\"}", status: 401)])
-            await #expect(throws: APIError.unauthorized) {
-                _ = try await cached.load()
-            }
+            await #expect(throws: APIError.unauthorized) { _ = try await repository.load() }
         }
 
-        @Test("Запись без сети падает, а не копится молча")
-        func writeFailsOffline() async throws {
-            let (snapshots, directory) = try makeStore()
+        // MARK: - Запись
+
+        @Test("Запись без сети не падает, а встаёт в очередь")
+        func queuesWriteOffline() async throws {
+            let (snapshots, queue, directory) = try makeStores()
             defer { try? FileManager.default.removeItem(at: directory) }
+            let repository = makeRepository(snapshots, queue)
+
+            MockURLProtocol.reset(with: [.ok(ledgerJSON)])
+            _ = try await repository.load()
 
             MockURLProtocol.reset(with: [.offline()])
-            let cached = CachedLedgerRepository(remote: makeRemoteRepository(), snapshots: snapshots)
-            await #expect(throws: APIError.self) {
-                try await cached.add(expense("100", on: day(2026, 8, 1)))
+            try await repository.add(expense("100", on: day(2026, 8, 20), title: "офлайн"))
+
+            #expect(await queue.count == 1)
+        }
+
+        @Test("Неотправленная трата видна в списке до появления связи")
+        func pendingWriteIsVisible() async throws {
+            let (snapshots, queue, directory) = try makeStores()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let repository = makeRepository(snapshots, queue)
+
+            MockURLProtocol.reset(with: [.ok(ledgerJSON)])
+            _ = try await repository.load()
+
+            MockURLProtocol.reset(with: [.offline()])
+            try await repository.add(expense("100", on: day(2026, 8, 20), title: "офлайн"))
+
+            // Ещё раз без сети. Два ответа: `load()` при непустой очереди
+            // сначала пытается её разгрузить, и только потом читает.
+            MockURLProtocol.reset(with: [.offline(), .offline()])
+            let ledger = try await repository.load()
+            #expect(ledger.expenses.count == 3)
+            #expect(ledger.expenses.contains { $0.title == "офлайн" })
+        }
+
+        @Test("Отказ сервера остаётся ошибкой и в очередь не попадает")
+        func serverRejectionStillThrows() async throws {
+            let (snapshots, queue, directory) = try makeStores()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let repository = makeRepository(snapshots, queue)
+
+            MockURLProtocol.reset(with: [.ok("{\"error\":\"Expense already exists\"}", status: 409)])
+            await #expect(throws: APIError.conflict) {
+                try await repository.add(expense("100", on: day(2026, 8, 20)))
             }
+            #expect(await queue.isEmpty)
+        }
+
+        @Test("При следующей загрузке очередь уходит на сервер")
+        func flushesOnNextLoad() async throws {
+            let (snapshots, queue, directory) = try makeStores()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let repository = makeRepository(snapshots, queue)
+
+            MockURLProtocol.reset(with: [.ok(ledgerJSON)])
+            _ = try await repository.load()
+
+            MockURLProtocol.reset(with: [.offline()])
+            try await repository.add(expense("100", on: day(2026, 8, 20), title: "офлайн"))
+            #expect(await queue.count == 1)
+
+            // Связь вернулась: сначала уходит очередь, потом читается свежее.
+            MockURLProtocol.reset(with: [.ok("{}", status: 201), .ok(ledgerJSON)])
+            _ = try await repository.load()
+            #expect(await queue.isEmpty)
+        }
+
+        @Test("Очередь переживает перезапуск приложения")
+        func queueSurvivesRestart() async throws {
+            let (snapshots, queue, directory) = try makeStores()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let queueURL = directory.appendingPathComponent("queue.json")
+
+            MockURLProtocol.reset(with: [.ok(ledgerJSON)])
+            _ = try await makeRepository(snapshots, queue).load()
+
+            MockURLProtocol.reset(with: [.offline()])
+            try await makeRepository(snapshots, queue)
+                .add(expense("100", on: day(2026, 8, 20), title: "офлайн"))
+
+            // Новый экземпляр читает очередь с диска — как после перезапуска.
+            let restored = PendingOperationQueue(fileURL: queueURL)
+            #expect(await restored.count == 1)
         }
     }
 }

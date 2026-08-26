@@ -11,11 +11,9 @@ public actor LedgerSnapshotStore {
         self.fileURL = fileURL
     }
 
-    /// Файл в Application Support: данные пользователя, а не кэш, который
+    /// Папка в Application Support: данные пользователя, а не кэш, который
     /// система вправе вычистить в любой момент.
-    public static func defaultURL(
-        fileManager: FileManager = .default
-    ) throws -> URL {
+    public static func directoryURL(fileManager: FileManager = .default) throws -> URL {
         let directory = try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -25,7 +23,11 @@ public actor LedgerSnapshotStore {
         .appendingPathComponent("Hisob", isDirectory: true)
 
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory.appendingPathComponent("ledger-snapshot.json")
+        return directory
+    }
+
+    public static func defaultURL(fileManager: FileManager = .default) throws -> URL {
+        try directoryURL(fileManager: fileManager).appendingPathComponent("ledger-snapshot.json")
     }
 
     public func save(_ ledger: Ledger) {

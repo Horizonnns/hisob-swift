@@ -3,7 +3,7 @@ import HisobCore
 
 /// Собирает хранилище по текущим настройкам подключения.
 enum RepositoryFactory {
-    /// Настроенное подключение — сеть с локальным снимком.
+    /// Настроенное подключение — сеть со снимком и очередью неотправленного.
     /// Ненастроенное — демонстрационные данные в памяти, чтобы приложение
     /// можно было посмотреть до подключения к серверу.
     @MainActor
@@ -17,14 +17,18 @@ enum RepositoryFactory {
     static func makeRemote(configuration: APIConfiguration) -> any LedgerRepository {
         let remote = RemoteLedgerRepository(configuration: configuration)
 
-        guard let url = try? LedgerSnapshotStore.defaultURL() else {
-            // Без доступа к папке приложения кэш недоступен — работаем
-            // напрямую по сети, это хуже, но не смертельно.
+        guard let snapshotURL = try? LedgerSnapshotStore.defaultURL(),
+              let queueURL = try? PendingOperationQueue.defaultURL()
+        else {
+            // Без доступа к папке приложения ни снимка, ни очереди быть
+            // не может — работаем напрямую по сети.
             return remote
         }
-        return CachedLedgerRepository(
+
+        return OfflineFirstLedgerRepository(
             remote: remote,
-            snapshots: LedgerSnapshotStore(fileURL: url)
+            snapshots: LedgerSnapshotStore(fileURL: snapshotURL),
+            queue: PendingOperationQueue(fileURL: queueURL)
         )
     }
 }
