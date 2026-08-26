@@ -27,6 +27,50 @@ enum L {
         static let collapseGroup = "Скрыть позиции"
     }
 
+    enum Analytics {
+        static let byCategory = "Расходы по категориям"
+        static let byMonth = "Расходы по месяцам"
+        static let incomeSources = "Доход по источникам"
+        static let total = "Всего"
+        static let amount = "Сумма"
+        static let month = "Месяц"
+        static let emptyTitle = "Нет данных за месяц"
+        static let emptyMessage = "Добавьте траты — здесь появится разбивка по категориям."
+    }
+
+    enum Sources {
+        static let title = "Источники дохода"
+        static let subtitle = "Места работы, с которых приходит оклад"
+        static let add = "Добавить источник"
+        static let name = "Название"
+        static let namePlaceholder = "Например, OD"
+        static let role = "Должность"
+        static let rolePlaceholder = "Например, Frontend-разработчик"
+        static let salaryHistory = "История оклада"
+        static let addSalary = "Добавить оклад"
+        static let effectiveFrom = "Действует с"
+        static let amount = "Сумма"
+        static let ended = "Работа завершена"
+        static let endedAt = "Последний месяц"
+        static let endedBadge = "Завершён"
+        static let currentSalary = "Текущий оклад"
+        static let noSalary = "Оклад не задан"
+        static let lastSalary = "последний"
+        static let emptyTitle = "Источников пока нет"
+        static let emptyMessage = "Добавьте место работы и историю оклада — из них считается доход месяца."
+        static let deleteExplanation = "Траты сохранятся: они личные и к работе не привязаны."
+        static let newSource = "Новый источник"
+        static let editSource = "Источник"  // короткий: между двумя кнопками тулбара длинный обрезается
+        static let save = "Сохранить"
+        static let salaryFooter = "Оклад действует с указанного месяца до следующей записи."
+        static let endedFooter = "После этого месяца источник перестаёт приносить доход. Без даты завершения оклад начислялся бы бесконечно."
+    }
+
+    enum Settings {
+        static let currency = "Валюта"
+        static let storageNotice = "Данные пока хранятся только в памяти и сбрасываются при перезапуске. Постоянное хранилище — следующий шаг."
+    }
+
     enum Empty {
         static let noExpensesTitle = "Трат пока нет"
         static let noExpensesMessage = "Добавьте первую трату — она появится в списке и в статистике месяца."
