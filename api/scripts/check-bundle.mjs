@@ -12,11 +12,15 @@
  *   2. точка входа импортирует `hono` — по этому признаку платформа её
  *      и находит, иначе сборка обрывается ещё до запуска;
  *   3. в корне `src/` нет файлов, кроме точек входа;
- *   4. каждая такая точка экспортирует по умолчанию функцию-обработчик.
+ *   4. каждая такая точка экспортирует по умолчанию функцию-обработчик
+ *      в нодовском соглашении `(req, res)` — проверяем настоящим запросом
+ *      через `http.createServer`, а не вызовом с `Request`: именно на этом
+ *      различии функция висела до таймаута, а проверка молчала.
  *
  * Запуск: npm run check:bundle
  */
 import { execFileSync } from 'node:child_process'
+import http from 'node:http'
 import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -102,11 +106,41 @@ try {
 		}
 	}
 
-	// Точка входа должна ещё и отвечать.
+	// Точка входа должна отвечать на настоящий HTTP-запрос.
+	// Поднимаем обычный http-сервер поверх экспорта — так же его вызывает
+	// рантайм. Вызов вида `handler(new Request(...))` тут не годится: он
+	// проходит и на веб-обработчике, который в проде висит до таймаута.
 	const entry = await import(pathToFileURL(join(workDir, 'index.js')).href)
-	const response = await entry.default(new Request('https://check.local/api/health'))
-	if (response.status !== 200) {
-		throw new Error(`/api/health вернул ${response.status}, ожидался 200`)
+	const server = http.createServer(entry.default)
+	await new Promise(resolve => server.listen(0, resolve))
+	const { port } = server.address()
+
+	try {
+		const controller = new AbortController()
+		const timer = setTimeout(() => controller.abort(), 5000)
+		let response
+		try {
+			response = await fetch(`http://127.0.0.1:${port}/api/health`, {
+				signal: controller.signal
+			})
+		} catch (cause) {
+			if (cause?.name === 'AbortError') {
+				throw new Error(
+					'Точка входа не ответила за 5 секунд. Скорее всего default-экспорт — ' +
+					'веб-обработчик (Request) => Response, а рантайм зовёт его как (req, res). ' +
+					'Используйте getRequestListener из @hono/node-server.'
+				)
+			}
+			throw cause
+		} finally {
+			clearTimeout(timer)
+		}
+
+		if (response.status !== 200) {
+			throw new Error(`/api/health вернул ${response.status}, ожидался 200`)
+		}
+	} finally {
+		server.close()
 	}
 
 	console.log(
