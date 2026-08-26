@@ -57,16 +57,17 @@ enum CategoryPresentation {
     /// в Swift солится случайным зерном на каждый процесс, из-за чего цвета
     /// категорий менялись при каждом старте приложения.
     static func tint(_ category: ExpenseCategory) -> Color {
-        DS.Palette.chart[stableIndex(category) % DS.Palette.chart.count]
-    }
-
-    private static func stableIndex(_ category: ExpenseCategory) -> Int {
-        if let index = ExpenseCategory.builtIn.firstIndex(of: category) {
-            return index
+        // У каждой встроенной категории собственный оттенок: на кольцевой
+        // диаграмме секторы обязаны различаться между собой.
+        if let index = ExpenseCategory.builtIn.firstIndex(of: category),
+           index < DS.Palette.categoryTints.count {
+            return DS.Palette.categoryTints[index]
         }
-        // Пользовательская категория: собственная стабильная свёртка ключа.
-        return category.rawValue.unicodeScalars.reduce(0) { accumulator, scalar in
+        // Пользовательская категория: стабильная свёртка ключа, потому что
+        // `String.hashValue` меняется от запуска к запуску.
+        let folded = category.rawValue.unicodeScalars.reduce(0) { accumulator, scalar in
             (accumulator &* 31 &+ Int(scalar.value)) & 0xFFFF
         }
+        return DS.Palette.categoryTints[folded % DS.Palette.categoryTints.count]
     }
 }

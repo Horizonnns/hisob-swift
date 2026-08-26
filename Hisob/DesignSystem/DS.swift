@@ -58,7 +58,7 @@ extension DS {
         /// Разделитель.
         static let separator = dynamic(light: 0xE3E5EA, dark: 0x253140)
 
-        /// Палитра графиков. Индекс категории стабилен, цвет не «прыгает».
+        /// Палитра общего назначения.
         static let chart: [Color] = [
             dynamic(light: 0x4F46E5, dark: 0x5B4FFF),
             dynamic(light: 0x2563EB, dark: 0x3B82F6),
@@ -66,6 +66,31 @@ extension DS {
             dynamic(light: 0xD97706, dark: 0xF59E0B),
             dynamic(light: 0xDC2626, dark: 0xEF4444),
             dynamic(light: 0xDB2777, dark: 0xEC4899)
+        ]
+
+        /// Отдельный оттенок на каждую из встроенных категорий.
+        ///
+        /// Палитры из шести цветов не хватало: индексы категорий сходились
+        /// по модулю, и на кольцевой диаграмме соседние секторы (Кредит и
+        /// Транспорт) красились одинаково. Порядок строго совпадает с
+        /// `ExpenseCategory.builtIn`.
+        static let categoryTints: [Color] = [
+            dynamic(light: 0xEA580C, dark: 0xFB923C), // Еда
+            dynamic(light: 0x2563EB, dark: 0x3B82F6), // Транспорт
+            dynamic(light: 0x7C3AED, dark: 0xA78BFA), // Аренда
+            dynamic(light: 0xCA8A04, dark: 0xFACC15), // Коммуналка
+            dynamic(light: 0x0891B2, dark: 0x22D3EE), // Связь/Интернет
+            dynamic(light: 0xDC2626, dark: 0xF87171), // Здоровье
+            dynamic(light: 0x0D9488, dark: 0x2DD4BF), // Гигиена
+            dynamic(light: 0xDB2777, dark: 0xF472B6), // Косметика
+            dynamic(light: 0x4F46E5, dark: 0x818CF8), // Одежда
+            dynamic(light: 0xC026D3, dark: 0xE879F9), // Развлечения
+            dynamic(light: 0x16A34A, dark: 0x4ADE80), // Образование
+            dynamic(light: 0xE11D48, dark: 0xFB7185), // Подарки
+            dynamic(light: 0x059669, dark: 0x34D399), // Благотворительность
+            dynamic(light: 0x9F1239, dark: 0xE11D48), // Кредит
+            dynamic(light: 0x047857, dark: 0x10B981), // Сбережения
+            dynamic(light: 0x64748B, dark: 0x94A3B8)  // Прочее
         ]
 
         private static func dynamic(light: UInt32, dark: UInt32) -> Color {
