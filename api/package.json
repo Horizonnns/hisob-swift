@@ -8,6 +8,7 @@
     "start": "tsx scripts/serve.ts",
     "typecheck": "tsc --noEmit",
     "check:bundle": "node scripts/check-bundle.mjs",
+    "check:legacy": "tsx scripts/check-legacy-mapping.ts",
     "postinstall": "prisma generate",
     "build": "prisma generate",
     "db:generate": "prisma generate",

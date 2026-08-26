@@ -2,92 +2,69 @@
  * Разовый перенос данных из веб-версии Worklog Dashboard.
  *
  * На вход — JSON, выгруженный из старой базы запросом из `docs/migration.md`.
- * Запуск:
- *   npx tsx scripts/import-legacy.ts ../legacy-export.json
  *
- * Скрипт идемпотентен по идентификаторам: повторный запуск на том же файле
- * не создаёт дублей, потому что id выводятся из содержимого детерминированно.
+ *   npm run import:legacy -- ../legacy-export.json --dry-run   # только показать
+ *   npm run import:legacy -- ../legacy-export.json             # записать
+ *
+ * Скрипт идемпотентен: идентификаторы выводятся из содержимого, повторный
+ * запуск на том же файле обновляет те же записи, а не создаёт дубли.
+ *
+ * Само преобразование живёт в src/server/lib/legacy.ts и покрыто проверками
+ * (`npm run check:legacy`) — в боевые данные должен попадать проверенный код.
  */
 import { readFileSync } from 'node:fs'
-import { createHash, randomUUID } from 'node:crypto'
 import { Prisma, PrismaClient } from '@prisma/client'
+import {
+	mapExpense,
+	mapSource,
+	pickCurrency,
+	type LegacyProject
+} from '../src/server/lib/legacy.js'
 
 const prisma = new PrismaClient()
 
-/** Русские подписи категорий из старой базы → стабильные ключи. */
-const CATEGORY_KEYS: Record<string, string> = {
-	'Еда': 'food',
-	'Транспорт': 'transport',
-	'Аренда': 'rent',
-	'Коммуналка': 'utilities',
-	'Связь/Интернет': 'communication',
-	'Здоровье': 'health',
-	'Гигиена': 'hygiene',
-	'Косметика': 'cosmetics',
-	'Одежда': 'clothing',
-	'Развлечения': 'entertainment',
-	'Образование': 'education',
-	'Подарки': 'gifts',
-	'Благотворительность': 'charity',
-	'Кредит': 'loan',
-	'Сбережения': 'savings',
-	'Прочее': 'other'
-}
-
-/**
- * Даты завершения работ. Проставляются вручную: в старой схеме окончания
- * у оклада не было, и вывести его из данных нельзя.
- */
-const ENDED_AT: Record<string, string> = {
-	asrmall: '2026-07'
-}
-
-type LegacyExport = {
-	slug: string
-	role: string
-	currency: string
-	salaries: { from: string; amount: string }[]
-	expenses: {
-		id: string
-		date: string
-		category: string
-		title: string
-		amount: string
-		items: { amount: string; title: string }[]
-	}[]
-}[]
-
-/** UUID из произвольного ключа — чтобы повторный импорт не плодил дубли. */
-function stableUUID(seed: string): string {
-	const hash = createHash('sha1').update(seed).digest('hex')
-	return [
-		hash.slice(0, 8),
-		hash.slice(8, 12),
-		'4' + hash.slice(13, 16),
-		((parseInt(hash[16]!, 16) & 0x3) | 0x8).toString(16) + hash.slice(17, 20),
-		hash.slice(20, 32)
-	].join('-')
-}
-
-function day(value: string): Date {
-	return new Date(`${value.slice(0, 10)}T12:00:00.000Z`)
-}
-
-async function main() {
-	const path = process.argv[2]
-	if (!path) {
-		console.error('Укажите путь к файлу выгрузки: npx tsx scripts/import-legacy.ts export.json')
-		process.exit(1)
-	}
-
-	const projects = JSON.parse(readFileSync(path, 'utf8')) as LegacyExport
+function readExport(path: string): LegacyProject[] {
+	const projects = JSON.parse(readFileSync(path, 'utf8')) as LegacyProject[]
 	if (!Array.isArray(projects) || projects.length === 0) {
-		console.error('Выгрузка пуста')
-		process.exit(1)
+		throw new Error('Выгрузка пуста или не является массивом проектов')
 	}
+	return projects
+}
 
-	// Валюта одна на пользователя; берём у первого проекта, где она задана.
-	const currency = projects.find(p => p.currency)?.currency ?? 'TJS'
+/** Показывает, что будет записано, ничего не меняя. */
+function preview(projects: LegacyProject[]): void {
+	console.log(`Валюта: ${pickCurrency(projects)}\n`)
+
+	for (const project of projects) {
+		const source = mapSource(project)
+		const expenses = project.expenses.map(mapExpense)
+		const groups = expenses.filter(e => e.amount === null)
+
+		console.log(`Источник «${source.name}» — ${source.role || 'должность не указана'}`)
+		console.log(`   завершён: ${source.endedAt ?? 'нет, работа продолжается'}`)
+		console.log(`   записей оклада: ${source.salaries.length}`)
+		console.log(`   трат: ${expenses.length} (из них групповых: ${groups.length})`)
+
+		const byCategory = new Map<string, number>()
+		for (const expense of expenses) {
+			byCategory.set(expense.category, (byCategory.get(expense.category) ?? 0) + 1)
+		}
+		const categories = [...byCategory.entries()]
+			.sort((a, b) => b[1] - a[1])
+			.map(([name, count]) => `${name}×${count}`)
+			.join(', ')
+		if (categories) console.log(`   категории: ${categories}`)
+
+		const months = expenses.map(e => e.date.toISOString().slice(0, 7)).sort()
+		if (months.length > 0) {
+			console.log(`   период трат: ${months[0]} … ${months[months.length - 1]}`)
+		}
+		console.log()
+	}
+}
+
+async function write(projects: LegacyProject[]): Promise<void> {
+	const currency = pickCurrency(projects)
 	await prisma.settings.upsert({
 		where: { id: 'singleton' },
 		create: { id: 'singleton', currency },
@@ -99,57 +76,50 @@ async function main() {
 	let itemCount = 0
 
 	for (const project of projects) {
-		const sourceId = stableUUID(`source:${project.slug}`)
-		const endedAt = ENDED_AT[project.slug] ?? null
+		const source = mapSource(project)
 
 		await prisma.incomeSource.upsert({
-			where: { id: sourceId },
-			create: { id: sourceId, name: project.slug, role: project.role ?? '', endedAt },
-			update: { name: project.slug, role: project.role ?? '', endedAt }
+			where: { id: source.id },
+			create: { id: source.id, name: source.name, role: source.role, endedAt: source.endedAt },
+			update: { name: source.name, role: source.role, endedAt: source.endedAt }
 		})
 
-		await prisma.salaryEntry.deleteMany({ where: { sourceId } })
-		if (project.salaries.length > 0) {
+		await prisma.salaryEntry.deleteMany({ where: { sourceId: source.id } })
+		if (source.salaries.length > 0) {
 			await prisma.salaryEntry.createMany({
-				data: project.salaries.map(entry => ({
-					id: stableUUID(`salary:${project.slug}:${entry.from}`),
-					sourceId,
-					effectiveFrom: day(entry.from),
+				data: source.salaries.map(entry => ({
+					id: entry.id,
+					sourceId: source.id,
+					effectiveFrom: entry.effectiveFrom,
 					amount: new Prisma.Decimal(entry.amount)
 				}))
 			})
 		}
 		sourceCount += 1
 
-		for (const expense of project.expenses) {
-			// Траты перестают принадлежать проекту: они личные.
-			const id = stableUUID(`expense:${expense.id}`)
-			const isGroup = expense.items.length > 0
+		for (const legacyExpense of project.expenses) {
+			const expense = mapExpense(legacyExpense)
+			// Траты перестают принадлежать источнику: они личные.
+			const fields = {
+				date: expense.date,
+				category: expense.category,
+				title: expense.title,
+				amount: expense.amount === null ? null : new Prisma.Decimal(expense.amount),
+				incomeSourceId: null
+			}
 
 			await prisma.expense.upsert({
-				where: { id },
-				create: {
-					id,
-					date: day(expense.date),
-					category: CATEGORY_KEYS[expense.category] ?? expense.category,
-					title: expense.title ?? '',
-					amount: isGroup ? null : new Prisma.Decimal(expense.amount),
-					incomeSourceId: null
-				},
-				update: {
-					date: day(expense.date),
-					category: CATEGORY_KEYS[expense.category] ?? expense.category,
-					title: expense.title ?? '',
-					amount: isGroup ? null : new Prisma.Decimal(expense.amount)
-				}
+				where: { id: expense.id },
+				create: { id: expense.id, ...fields },
+				update: fields
 			})
 
-			await prisma.expenseItem.deleteMany({ where: { expenseId: id } })
-			if (isGroup) {
+			await prisma.expenseItem.deleteMany({ where: { expenseId: expense.id } })
+			if (expense.items.length > 0) {
 				await prisma.expenseItem.createMany({
-					data: expense.items.map((item, index) => ({
-						id: stableUUID(`item:${expense.id}:${index}`),
-						expenseId: id,
+					data: expense.items.map(item => ({
+						id: item.id,
+						expenseId: expense.id,
 						amount: new Prisma.Decimal(item.amount),
 						title: item.title
 					}))
@@ -162,17 +132,40 @@ async function main() {
 
 	console.log(`Перенесено: источников ${sourceCount}, трат ${expenseCount}, позиций ${itemCount}`)
 	console.log(`Валюта: ${currency}`)
-	for (const [slug, month] of Object.entries(ENDED_AT)) {
-		console.log(`Источник «${slug}» помечен завершённым: последний месяц ${month}`)
-	}
 	console.log('\nСверьте контрольные цифры за август 2026 в приложении:')
 	console.log('  «Оклад» и «Потрачено» меняться не должны;')
 	console.log('  «Перенос» и «Остаток» изменятся — цепочка стала сквозной.')
 }
 
+async function main() {
+	const args = process.argv.slice(2)
+	const path = args.find(arg => !arg.startsWith('--'))
+	const isDryRun = args.includes('--dry-run')
+
+	if (!path) {
+		console.error(
+			'Укажите путь к файлу выгрузки:\n' +
+			'  npm run import:legacy -- ../legacy-export.json --dry-run\n' +
+			'  npm run import:legacy -- ../legacy-export.json'
+		)
+		process.exit(1)
+	}
+
+	const projects = readExport(path)
+	preview(projects)
+
+	if (isDryRun) {
+		console.log('Это предпросмотр — в базу ничего не записано.')
+		console.log('Уберите --dry-run, чтобы выполнить импорт.')
+		return
+	}
+
+	await write(projects)
+}
+
 main()
 	.catch(error => {
-		console.error(error)
+		console.error(error instanceof Error ? error.message : error)
 		process.exit(1)
 	})
 	.finally(() => prisma.$disconnect())
