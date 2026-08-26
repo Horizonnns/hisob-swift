@@ -51,22 +51,6 @@ struct RootTabView: View {
         switch route {
         case .incomeSources:
             IncomeSourcesView(viewModel: IncomeSourcesViewModel(store: store))
-        case .expenseDetails:
-            PlaceholderView(title: L.Month.expenses, symbol: "list.bullet")
         }
-    }
-}
-
-/// Заглушка для ещё не собранных экранов.
-struct PlaceholderView: View {
-    let title: String
-    let symbol: String
-
-    var body: some View {
-        EmptyStateView(symbol: symbol, title: title, message: L.Common.comingSoon)
-            .frame(maxHeight: .infinity)
-            .background(DS.Palette.background)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
     }
 }

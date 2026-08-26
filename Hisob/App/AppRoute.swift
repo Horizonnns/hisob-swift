@@ -26,5 +26,4 @@ enum AppTab: Hashable, CaseIterable {
 /// Экраны внутри стеков навигации.
 enum AppRoute: Hashable {
     case incomeSources
-    case expenseDetails(UUID)
 }
