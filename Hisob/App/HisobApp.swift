@@ -3,15 +3,18 @@ import SwiftUI
 
 @main
 struct HisobApp: App {
-    /// Пока хранилище в памяти: слой представления от этого не зависит,
-    /// подмена на SwiftData или сеть — замена одной реализации протокола.
-    @State private var store = LedgerStore(
-        repository: InMemoryLedgerRepository(ledger: PreviewData.ledger)
-    )
+    @State private var connection: ConnectionSettings
+    @State private var store: LedgerStore
+
+    init() {
+        let connection = ConnectionSettings()
+        _connection = State(initialValue: connection)
+        _store = State(initialValue: LedgerStore(repository: RepositoryFactory.make(for: connection)))
+    }
 
     var body: some Scene {
         WindowGroup {
-            RootTabView(store: store)
+            RootTabView(store: store, connection: connection)
         }
     }
 }

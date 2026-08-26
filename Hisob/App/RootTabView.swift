@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootTabView: View {
     let store: LedgerStore
+    let connection: ConnectionSettings
 
     @State private var router = AppRouter()
 
@@ -23,7 +24,7 @@ struct RootTabView: View {
             .tag(AppTab.analytics)
 
             NavigationStack(path: $router.settingsPath) {
-                SettingsView(store: store, path: $router.settingsPath)
+                SettingsView(store: store, connection: connection, path: $router.settingsPath)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
             .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.symbol) }

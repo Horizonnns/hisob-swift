@@ -68,7 +68,21 @@ enum L {
 
     enum Settings {
         static let currency = "Валюта"
-        static let storageNotice = "Данные пока хранятся только в памяти и сбрасываются при перезапуске. Постоянное хранилище — следующий шаг."
+        static let connection = "Подключение"
+        static let connected = "Подключено"
+        static let notConnected = "Демо-режим"
+        static let demoNotice = "Подключение не настроено — показаны демонстрационные данные, они не сохраняются. Укажите адрес сервера и токен, чтобы работать с реальной базой."
+        static let connectedNotice = "Данные хранятся на сервере. Последняя загрузка сохраняется на устройстве и показывается без сети."
+    }
+
+    enum Connection {
+        static let title = "Подключение"
+        static let urlPlaceholder = "hisob-api.vercel.app"
+        static let tokenPlaceholder = "Токен доступа"
+        static let footer = "Адрес развёрнутого API и токен из переменной HISOB_API_TOKEN. Токен хранится в Keychain устройства."
+        static let check = "Проверить связь"
+        static let disconnect = "Отключить"
+        static let disconnectFooter = "Данные на сервере останутся. Приложение вернётся к демонстрационному режиму."
     }
 
     enum Empty {

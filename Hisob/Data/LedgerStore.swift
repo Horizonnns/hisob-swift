@@ -17,7 +17,7 @@ final class LedgerStore {
         case failed(String)
     }
 
-    private let repository: any LedgerRepository
+    private var repository: any LedgerRepository
 
     private(set) var ledger = Ledger()
     private(set) var state: State = .loading
@@ -44,6 +44,14 @@ final class LedgerStore {
     /// данные не перечитывают.
     func loadIfNeeded() async {
         guard state == .loading else { return }
+        await load()
+    }
+
+    /// Подменяет хранилище при смене настроек подключения и перечитывает
+    /// данные. Экраны об этом не знают: они читают тот же стор.
+    func use(_ repository: any LedgerRepository) async {
+        self.repository = repository
+        operationError = nil
         await load()
     }
 
