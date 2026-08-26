@@ -1,5 +1,5 @@
 import type { Expense, ExpenseItem, IncomeSource, SalaryEntry } from '@prisma/client'
-import { dateToString, moneyToString } from './money'
+import { dateToString, moneyToString } from './money.js'
 
 type ExpenseRow = Expense & { items: ExpenseItem[] }
 type SourceRow = IncomeSource & { salaries: SalaryEntry[] }
