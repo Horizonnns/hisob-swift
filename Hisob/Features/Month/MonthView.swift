@@ -181,20 +181,23 @@ struct MonthView: View {
                             // приподнимает строку как есть, без подложки,
                             // и она сливается с фоном.
                             .contextMenu {
-                                // Цвета пунктов меню рисует система, `.tint`
-                                // здесь не работает: правка идёт нейтральным
-                                // белым, удаление — системным красным по роли.
+                                // Иконки в меню система красит акцентом
+                                // приложения — оба пункта выходили янтарными.
+                                // Правке возвращаем цвет текста (белый на
+                                // тёмном, чёрный на светлом), удалению — красный.
                                 Button {
                                     editingExpense = expense
                                 } label: {
                                     Label(L.Common.edit, systemImage: "pencil")
                                 }
+                                .tint(Color.primary)
 
                                 Button(role: .destructive) {
                                     Task { await viewModel.deleteExpense(expense) }
                                 } label: {
                                     Label(L.Common.delete, systemImage: "trash")
                                 }
+                                .tint(DS.Palette.destructive)
                             } preview: {
                                 ExpenseRow(
                                     expense: expense,

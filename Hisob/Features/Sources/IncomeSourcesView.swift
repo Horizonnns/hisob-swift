@@ -201,12 +201,14 @@ struct IncomeSourcesView: View {
             } label: {
                 Label(L.Common.edit, systemImage: "pencil")
             }
+            .tint(Color.primary)
 
             Button(role: .destructive) {
                 Task { await viewModel.delete(source) }
             } label: {
                 Label(L.Common.delete, systemImage: "trash")
             }
+            .tint(DS.Palette.destructive)
         } preview: {
             rowContent(source, isActive: isActive, salary: salary)
                 .padding(DS.Spacing.l)
