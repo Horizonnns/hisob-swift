@@ -143,23 +143,36 @@ struct RowSkeleton: View {
     }
 }
 
-/// Заглушка плашки статистики.
-struct StatTileSkeleton: View {
+/// Заглушка сводки месяца — повторяет форму `MonthSummaryCard`.
+struct SummarySkeleton: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.s) {
-            HStack(spacing: DS.Spacing.s) {
-                SkeletonBlock(width: 20, height: 20, cornerRadius: 5)
+        VStack(alignment: .leading, spacing: DS.Spacing.m) {
+            VStack(alignment: .leading, spacing: DS.Spacing.s) {
                 SkeletonBlock(width: 68, height: 9)
+                SkeletonBlock(width: 210, height: 34, cornerRadius: 9)
             }
-            SkeletonBlock(width: 120, height: 22, cornerRadius: 7)
+
+            Rectangle()
+                .fill(DS.Palette.separator)
+                .frame(height: 0.5)
+
+            HStack(alignment: .top, spacing: DS.Spacing.m) {
+                ForEach([84.0, 78.0, 92.0], id: \.self) { width in
+                    VStack(alignment: .leading, spacing: DS.Spacing.s) {
+                        SkeletonBlock(width: width * 0.8, height: 9)
+                        SkeletonBlock(width: width, height: 12)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Spacing.l)
-        .dsGlass(cornerRadius: DS.Radius.tile)
+        .dsGlass()
     }
 }
 
-/// Заглушка списка трат: плашки статистики, чипы категорий и строки.
+/// Заглушка списка трат: сводка, чипы категорий и строки по дням.
 struct MonthSkeleton: View {
     /// Ширины подобраны неровно — так список читается как настоящий.
     private let widths: [(CGFloat, CGFloat)] = [
@@ -168,15 +181,7 @@ struct MonthSkeleton: View {
 
     var body: some View {
         VStack(spacing: DS.Spacing.l) {
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: DS.Spacing.m),
-                          GridItem(.flexible(), spacing: DS.Spacing.m)],
-                spacing: DS.Spacing.m
-            ) {
-                StatTileSkeleton()
-                StatTileSkeleton()
-                StatTileSkeleton()
-            }
+            SummarySkeleton()
 
             HStack(spacing: DS.Spacing.s) {
                 ForEach([104.0, 82.0, 96.0], id: \.self) { width in

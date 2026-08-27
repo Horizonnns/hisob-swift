@@ -89,26 +89,7 @@ struct MonthView: View {
     }
 
     private var statTiles: some View {
-        let summary = viewModel.summary
-        return LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: DS.Spacing.m),
-                      GridItem(.flexible(), spacing: DS.Spacing.m)],
-            spacing: DS.Spacing.m
-        ) {
-            StatTile(label: L.Month.income, amount: summary.income, currency: summary.currency,
-                     symbol: "arrow.up.right", tint: DS.Palette.income)
-
-            if viewModel.showsCarryover {
-                StatTile(label: L.Month.carryover, amount: summary.carryover, currency: summary.currency,
-                         symbol: "arrow.turn.down.right", tint: DS.Palette.carryover)
-            }
-
-            StatTile(label: L.Month.spent, amount: summary.spent, currency: summary.currency,
-                     symbol: "arrow.down.right", tint: DS.Palette.expense)
-
-            StatTile(label: L.Month.remaining, amount: summary.remaining, currency: summary.currency,
-                     symbol: "wallet.bifold", tint: summary.remaining >= .zero ? DS.Palette.remaining : DS.Palette.expense)
-        }
+        MonthSummaryCard(summary: viewModel.summary, showsCarryover: viewModel.showsCarryover)
     }
 
     private var categoryFilter: some View {
