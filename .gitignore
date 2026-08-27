@@ -16,6 +16,8 @@ node_modules/
 *.tsbuildinfo
 .vercel
 legacy-export.json
+backup*.json
+*-backup.json
 
 # команда подписи — своя у каждой машины
 Signing.xcconfig
