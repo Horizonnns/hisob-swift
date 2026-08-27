@@ -111,8 +111,21 @@ struct MonthView: View {
             }
             .scrollIndicators(.hidden)
             // Лента чипов уходит под края экрана, а не обрывается на поле
-            // строки списка: так видно, что её можно листать.
+            // строки списка: так видно, что её можно листать. Края растворяем —
+            // иначе крайний чип срезается посреди слова и выглядит как брак.
             .padding(.horizontal, -DS.Spacing.screen)
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.03),
+                        .init(color: .black, location: 0.97),
+                        .init(color: .clear, location: 1)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
 
             if viewModel.hasFilter {
                 Button(L.Month.resetFilters, action: viewModel.clearFilters)
