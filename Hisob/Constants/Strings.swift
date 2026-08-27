@@ -129,6 +129,19 @@ enum L {
         static let cancel = "Отмена"
     }
 
+    enum Lock {
+        static let title = "Приложение заперто"
+        static let subtitle = "Подтвердите, что это вы, чтобы увидеть свои финансы."
+        static let reason = "Разблокировать Hisob"
+        static let cancel = "Отмена"
+        static let passcode = "Код-пароль"
+        static let settingsTitle = "Вход по биометрии"
+        static let settingsSubtitle = "Спрашивать при запуске и возврате из фона"
+        static let unavailable = "На этом устройстве недоступно"
+        static let failed = "Не удалось подтвердить личность. Попробуйте ещё раз."
+        static let turnedOff = "Биометрия стала недоступна — вход по биометрии выключен."
+    }
+
     enum Common {
         static let delete = "Удалить"
         static let edit = "Изменить"

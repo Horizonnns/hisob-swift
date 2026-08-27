@@ -4,6 +4,7 @@ import SwiftUI
 struct RootTabView: View {
     let store: LedgerStore
     let connection: ConnectionSettings
+    let lock: BiometricLock
 
     @State private var router = AppRouter()
 
@@ -24,7 +25,7 @@ struct RootTabView: View {
             .tag(AppTab.analytics)
 
             NavigationStack(path: $router.settingsPath) {
-                SettingsView(store: store, connection: connection, path: $router.settingsPath)
+                SettingsView(store: store, connection: connection, lock: lock, path: $router.settingsPath)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
             .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.symbol) }

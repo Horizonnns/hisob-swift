@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     let store: LedgerStore
     let connection: ConnectionSettings
+    let lock: BiometricLock
     @Binding var path: NavigationPath
 
     @State private var isEditingConnection = false
@@ -20,6 +21,10 @@ struct SettingsView: View {
 
             Section {
                 sourcesRow
+            }
+
+            Section {
+                lockRow
             }
 
             Section {
@@ -52,6 +57,33 @@ struct SettingsView: View {
 
     /// Валюта выбирается из списка, а не вводится текстом: API принимает
     /// ровно три буквы, и опечатка сломала бы отображение всех сумм.
+    @ViewBuilder
+    private var lockRow: some View {
+        HStack(spacing: DS.Spacing.m) {
+            Image(systemName: lock.isEnabled ? "lock.fill" : "lock.open")
+                .foregroundStyle(lock.isEnabled ? DS.Palette.brand : .secondary)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L.Lock.settingsTitle).font(DS.Typography.body)
+                Text(lock.isAvailable ? L.Lock.settingsSubtitle : L.Lock.unavailable)
+                    .font(DS.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: Binding(
+                get: { lock.isEnabled },
+                set: { lock.isEnabled = $0 }
+            ))
+            .labelsHidden()
+            .disabled(!lock.isAvailable)
+        }
+        .padding(.vertical, DS.Spacing.xs)
+        .listRowBackground(Color.clear)
+    }
+
     private var currencyRow: some View {
         HStack(spacing: DS.Spacing.m) {
             Image(systemName: "coloncurrencysign.circle.fill")
