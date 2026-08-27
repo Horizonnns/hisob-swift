@@ -43,6 +43,9 @@ extension DS {
         static let income = dynamic(light: 0x059669, dark: 0x10B981)
         /// Расход и перерасход.
         static let expense = dynamic(light: 0xDC2626, dark: 0xEF4444)
+        /// Удаление. Глубже, чем красный расхода: это не цифра, а действие,
+        /// и оно не должно выглядеть как ещё одна сумма.
+        static let destructive = dynamic(light: 0xB3261E, dark: 0xD22B2B)
         /// Остаток.
         static let remaining = dynamic(light: 0x2563EB, dark: 0x3B82F6)
         /// Перенос из прошлого месяца.

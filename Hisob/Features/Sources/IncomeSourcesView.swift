@@ -193,6 +193,7 @@ struct IncomeSourcesView: View {
             } label: {
                 Label(L.Common.delete, systemImage: "trash")
             }
+            .tint(DS.Palette.destructive)
         }
         .contextMenu {
             Button {
