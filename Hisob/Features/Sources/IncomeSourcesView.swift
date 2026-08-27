@@ -102,76 +102,88 @@ struct IncomeSourcesView: View {
         return formatter
     }()
 
+    /// Содержимое строки без обёртки-кнопки.
+    ///
+    /// Вынесено отдельно, потому что превью контекстного меню не может
+    /// вызывать `row` — тип определялся бы через самого себя.
+    @ViewBuilder
+    private func rowContent(
+        _ source: IncomeSource,
+        isActive: Bool,
+        salary: Money
+    ) -> some View {
+        HStack(spacing: DS.Spacing.m) {
+            Image(systemName: "briefcase.fill")
+                .font(.system(size: DS.IconSize.regular))
+                .foregroundStyle(isActive ? DS.Palette.income : .secondary)
+                .frame(width: 32, height: 32)
+                .background(
+                    (isActive ? DS.Palette.income : Color.secondary).opacity(0.14),
+                    in: RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: DS.Spacing.s) {
+                    Text(source.name)
+                        .font(DS.Typography.body)
+                        .lineLimit(1)
+
+                    if let endedAt = source.endedAt {
+                        // Для ещё не наступившего окончания подпись другая:
+                        // «Завершён» о работе, которая платит в этом месяце,
+                        // было бы неправдой.
+                        Text(isActive
+                            ? "\(L.Sources.endingBadge) \(monthName(endedAt))"
+                            : L.Sources.endedBadge)
+                            .font(.system(size: 10, weight: .bold))
+                            .padding(.horizontal, DS.Spacing.s)
+                            .padding(.vertical, 2)
+                            .background(
+                                (isActive ? DS.Palette.carryover : Color.secondary).opacity(0.18),
+                                in: Capsule()
+                            )
+                            .foregroundStyle(isActive ? DS.Palette.carryover : .secondary)
+                    }
+                }
+
+                Text(source.role.isEmpty ? L.Sources.subtitle : source.role)
+                    .font(DS.Typography.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: DS.Spacing.s)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                if salary > .zero {
+                    Text(MoneyFormat.string(salary, currency: viewModel.currency))
+                        .font(DS.Typography.amountCompact)
+                } else if let last = viewModel.lastSalary(source) {
+                    // У завершённой работы оклад был — просто больше не
+                    // начисляется. Писать «не задан» было бы неправдой.
+                    Text(MoneyFormat.string(last, currency: viewModel.currency))
+                        .font(DS.Typography.amountCompact)
+                        .foregroundStyle(.secondary)
+                    Text(L.Sources.lastSalary)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                } else {
+                    Text(L.Sources.noSalary)
+                        .font(DS.Typography.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     private func row(_ source: IncomeSource) -> some View {
         let isActive = viewModel.isActiveNow(source)
-        let isEnding = viewModel.isEnding(source)
         let salary = viewModel.currentSalary(source)
 
         return Button {
             editing = .existing(source)
         } label: {
-            HStack(spacing: DS.Spacing.m) {
-                Image(systemName: "briefcase.fill")
-                    .font(.system(size: DS.IconSize.regular))
-                    .foregroundStyle(isActive ? DS.Palette.income : .secondary)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        (isActive ? DS.Palette.income : Color.secondary).opacity(0.14),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.chip, style: .continuous)
-                    )
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: DS.Spacing.s) {
-                        Text(source.name)
-                            .font(DS.Typography.body)
-                            .lineLimit(1)
-
-                        if let endedAt = source.endedAt {
-                            // Для ещё не наступившего окончания подпись другая:
-                            // «Завершён» о работе, которая платит в этом месяце,
-                            // было бы неправдой.
-                            Text(isActive
-                                ? "\(L.Sources.endingBadge) \(monthName(endedAt))"
-                                : L.Sources.endedBadge)
-                                .font(.system(size: 10, weight: .bold))
-                                .padding(.horizontal, DS.Spacing.s)
-                                .padding(.vertical, 2)
-                                .background(
-                                    (isActive ? DS.Palette.carryover : Color.secondary).opacity(0.18),
-                                    in: Capsule()
-                                )
-                                .foregroundStyle(isActive ? DS.Palette.carryover : .secondary)
-                        }
-                    }
-
-                    Text(source.role.isEmpty ? L.Sources.subtitle : source.role)
-                        .font(DS.Typography.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: DS.Spacing.s)
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    if salary > .zero {
-                        Text(MoneyFormat.string(salary, currency: viewModel.currency))
-                            .font(DS.Typography.amountCompact)
-                    } else if let last = viewModel.lastSalary(source) {
-                        // У завершённой работы оклад был — просто больше не
-                        // начисляется. Писать «не задан» было бы неправдой.
-                        Text(MoneyFormat.string(last, currency: viewModel.currency))
-                            .font(DS.Typography.amountCompact)
-                            .foregroundStyle(.secondary)
-                        Text(L.Sources.lastSalary)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-                    } else {
-                        Text(L.Sources.noSalary)
-                            .font(DS.Typography.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
+            rowContent(source, isActive: isActive, salary: salary)
             .padding(.vertical, DS.Spacing.s)
             .contentShape(.rect)
         }
@@ -183,6 +195,24 @@ struct IncomeSourcesView: View {
             } label: {
                 Label(L.Common.delete, systemImage: "trash")
             }
+        }
+        .contextMenu {
+            Button {
+                editing = .existing(source)
+            } label: {
+                Label(L.Common.edit, systemImage: "pencil")
+            }
+
+            Button(role: .destructive) {
+                Task { await viewModel.delete(source) }
+            } label: {
+                Label(L.Common.delete, systemImage: "trash")
+            }
+        } preview: {
+            rowContent(source, isActive: isActive, salary: salary)
+                .padding(DS.Spacing.l)
+                .frame(width: 320)
+                .background(DS.Palette.surfaceElevated)
         }
     }
 }

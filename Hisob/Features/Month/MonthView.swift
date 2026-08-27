@@ -185,6 +185,33 @@ struct MonthView: View {
                                 }
                                 .tint(DS.Palette.brand)
                             }
+                            // Нажатие с удержанием: фон размывается, строка
+                            // поднимается отдельной карточкой, меню раскрывается
+                            // рядом. Превью задаём своё — иначе система
+                            // приподнимает строку как есть, без подложки,
+                            // и она сливается с фоном.
+                            .contextMenu {
+                                Button {
+                                    editingExpense = expense
+                                } label: {
+                                    Label(L.Common.edit, systemImage: "pencil")
+                                }
+
+                                Button(role: .destructive) {
+                                    Task { await viewModel.deleteExpense(expense) }
+                                } label: {
+                                    Label(L.Common.delete, systemImage: "trash")
+                                }
+                            } preview: {
+                                ExpenseRow(
+                                    expense: expense,
+                                    currency: viewModel.currency,
+                                    expandedIDs: .constant([expense.id])
+                                )
+                                .padding(.horizontal, DS.Spacing.l)
+                                .frame(width: 320)
+                                .background(DS.Palette.surfaceElevated)
+                            }
                     }
                 } header: {
                     Text(L.Month.expenses)

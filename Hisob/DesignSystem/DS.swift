@@ -48,15 +48,16 @@ extension DS {
         /// Перенос из прошлого месяца.
         static let carryover = dynamic(light: 0x4F46E5, dark: 0x6366F1)
 
-        /// Фон экрана. В тёмной теме — глубокий сине-чёрный, как в Telegram:
-        /// он мягче чистого чёрного и даёт слоям читаемую иерархию.
-        static let background = dynamic(light: 0xF2F3F7, dark: 0x0F1620)
-        /// Поверхность карточки.
-        static let surface = dynamic(light: 0xFFFFFF, dark: 0x18222D)
+        /// Фон экрана. В тёмной теме — чистый чёрный, как в ночной теме
+        /// Telegram: на OLED он гаснет полностью, и карточки читаются
+        /// как приподнятые слои, а не как пятна на сером.
+        static let background = dynamic(light: 0xF2F3F7, dark: 0x000000)
+        /// Поверхность карточки — первый слой над чёрным.
+        static let surface = dynamic(light: 0xFFFFFF, dark: 0x131315)
         /// Приподнятая поверхность — поля ввода, чипы.
-        static let surfaceElevated = dynamic(light: 0xEDEFF3, dark: 0x1F2A36)
-        /// Разделитель.
-        static let separator = dynamic(light: 0xE3E5EA, dark: 0x253140)
+        static let surfaceElevated = dynamic(light: 0xEDEFF3, dark: 0x1F1F23)
+        /// Разделитель. На чёрном достаточно едва заметного.
+        static let separator = dynamic(light: 0xE3E5EA, dark: 0x2A2A2E)
 
         /// Палитра общего назначения.
         static let chart: [Color] = [
