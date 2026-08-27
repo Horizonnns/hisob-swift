@@ -23,6 +23,8 @@ enum L {
         static let resetFilters = "Сбросить"
         static let addExpense = "Добавить расход"
         static let positions = "поз."
+        static let today = "Сегодня"
+        static let yesterday = "Вчера"
         static let expandGroup = "Показать позиции"
         static let collapseGroup = "Скрыть позиции"
     }

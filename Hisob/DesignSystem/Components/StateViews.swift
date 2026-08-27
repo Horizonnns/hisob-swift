@@ -185,8 +185,20 @@ struct MonthSkeleton: View {
                 Spacer(minLength: 0)
             }
 
-            VStack(spacing: 0) {
-                ForEach(Array(widths.enumerated()), id: \.offset) { _, size in
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(widths.enumerated()), id: \.offset) { index, size in
+                    // Заголовок дня — перед первой строкой и через каждые две:
+                    // ровно так список выглядит с настоящими данными.
+                    if index % 2 == 0 {
+                        HStack {
+                            SkeletonBlock(width: 86, height: 9)
+                            Spacer(minLength: 0)
+                            SkeletonBlock(width: 54, height: 9)
+                        }
+                        .padding(.top, index == 0 ? 0 : DS.Spacing.l)
+                        .padding(.bottom, DS.Spacing.s)
+                    }
+
                     RowSkeleton(titleWidth: size.0, amountWidth: size.1)
                     Divider().overlay(DS.Palette.separator)
                 }

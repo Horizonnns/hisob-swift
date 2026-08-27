@@ -15,13 +15,16 @@ struct MonthView: View {
                 header
             }
             .listRowInsets(EdgeInsets(top: DS.Spacing.s, leading: DS.Spacing.screen,
-                                      bottom: DS.Spacing.m, trailing: DS.Spacing.screen))
+                                      bottom: DS.Spacing.s, trailing: DS.Spacing.screen))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 
             content
         }
         .listStyle(.plain)
+        // Разделов стало много (по одному на день), и стандартный зазор между
+        // ними разрывал список на куски.
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .background(DS.Palette.background)
         .navigationTitle(L.Month.title)
@@ -170,52 +173,72 @@ struct MonthView: View {
                         .listRowSeparator(.hidden)
                 }
             } else {
-                Section {
-                    ForEach(viewModel.visibleExpenses) { expense in
-                        ExpenseRow(expense: expense, currency: viewModel.currency,
-                                   expandedIDs: $expandedIDs)
-                            .listRowBackground(Color.clear)
-                            // Нажатие с удержанием: фон размывается, строка
-                            // поднимается отдельной карточкой, меню раскрывается
-                            // рядом. Превью задаём своё — иначе система
-                            // приподнимает строку как есть, без подложки,
-                            // и она сливается с фоном.
-                            .contextMenu {
-                                // Иконки в меню система красит акцентом
-                                // приложения — оба пункта выходили янтарными.
-                                // Правке возвращаем цвет текста (белый на
-                                // тёмном, чёрный на светлом), удалению — красный.
-                                Button {
-                                    editingExpense = expense
-                                } label: {
-                                    Label(L.Common.edit, systemImage: "pencil")
-                                }
-                                .tint(Color.primary)
-
-                                Button(role: .destructive) {
-                                    Task { await viewModel.deleteExpense(expense) }
-                                } label: {
-                                    Label(L.Common.delete, systemImage: "trash")
-                                }
-                                .tint(DS.Palette.destructive)
-                            } preview: {
-                                ExpenseRow(
-                                    expense: expense,
-                                    currency: viewModel.currency,
-                                    expandedIDs: .constant([expense.id])
-                                )
-                                .padding(.horizontal, DS.Spacing.l)
-                                .frame(width: 320)
-                                .background(DS.Palette.surfaceElevated)
-                            }
+                // Раздел на день вместо одного общего «Траты»: заголовок
+                // прилипает при прокрутке и всё время говорит, какой день
+                // перед глазами и сколько за него ушло.
+                ForEach(viewModel.visibleDays) { day in
+                    Section {
+                        ForEach(day.expenses) { expense in
+                            expenseRow(expense)
+                        }
+                    } header: {
+                        dayHeader(day)
                     }
-                } header: {
-                    Text(L.Month.expenses)
-                        .font(DS.Typography.label)
-                        .foregroundStyle(.secondary)
                 }
             }
         }
+    }
+
+    private func dayHeader(_ day: MonthViewModel.DaySection) -> some View {
+        HStack(spacing: DS.Spacing.s) {
+            Text(viewModel.dayTitle(day.date))
+                .font(DS.Typography.label)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            Spacer(minLength: DS.Spacing.s)
+
+            Text(MoneyFormat.string(day.total, currency: viewModel.currency))
+                .font(DS.Typography.label.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func expenseRow(_ expense: Expense) -> some View {
+        ExpenseRow(expense: expense, currency: viewModel.currency,
+                   expandedIDs: $expandedIDs)
+            .listRowBackground(Color.clear)
+            // Нажатие с удержанием: фон размывается, строка поднимается
+            // отдельной карточкой, меню раскрывается рядом. Превью задаём
+            // своё — иначе система приподнимает строку как есть, без
+            // подложки, и она сливается с фоном.
+            .contextMenu {
+                // Иконки в меню система красит акцентом приложения — оба
+                // пункта выходили янтарными. Правке возвращаем цвет текста
+                // (белый на тёмном, чёрный на светлом), удалению — красный.
+                Button {
+                    editingExpense = expense
+                } label: {
+                    Label(L.Common.edit, systemImage: "pencil")
+                }
+                .tint(Color.primary)
+
+                Button(role: .destructive) {
+                    Task { await viewModel.deleteExpense(expense) }
+                } label: {
+                    Label(L.Common.delete, systemImage: "trash")
+                }
+                .tint(DS.Palette.destructive)
+            } preview: {
+                ExpenseRow(
+                    expense: expense,
+                    currency: viewModel.currency,
+                    expandedIDs: .constant([expense.id])
+                )
+                .padding(.horizontal, DS.Spacing.l)
+                .frame(width: 320)
+                .background(DS.Palette.surfaceElevated)
+            }
     }
 
     @ViewBuilder

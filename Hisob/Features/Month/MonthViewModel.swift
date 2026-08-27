@@ -41,6 +41,34 @@ final class MonthViewModel {
         monthExpenses.filtered(by: query, categoryTitle: CategoryPresentation.title)
     }
 
+    /// День списка: заголовок несёт дату и сумму за день, поэтому в самих
+    /// строках дата больше не повторяется — раньше она была самой частой
+    /// надписью на экране и ничего не сообщала.
+    struct DaySection: Identifiable {
+        let date: Date
+        let expenses: [Expense]
+
+        var id: Date { date }
+        var total: Money { expenses.reduce(.zero) { $0 + $1.total } }
+    }
+
+    /// От свежего к старому: то, что случилось сегодня, нужно чаще, чем то,
+    /// что было первого числа.
+    var visibleDays: [DaySection] {
+        Dictionary(grouping: visibleExpenses) { calendar.startOfDay(for: $0.date) }
+            .map { DaySection(date: $0.key, expenses: $0.value) }
+            .sorted { $0.date > $1.date }
+    }
+
+    /// «Сегодня» и «Вчера» вместо даты: так быстрее опознаётся свежее.
+    func dayTitle(_ date: Date) -> String {
+        if calendar.isDateInToday(date) { return L.Month.today }
+        if calendar.isDateInYesterday(date) { return L.Month.yesterday }
+        return date.formatted(
+            .dateTime.day().month(.wide).locale(Locale(identifier: "ru_RU"))
+        )
+    }
+
     /// Категории, встречающиеся в этом месяце, со счётчиком.
     var categoryCounts: [(category: ExpenseCategory, count: Int)] {
         Dictionary(grouping: monthExpenses, by: \.category)

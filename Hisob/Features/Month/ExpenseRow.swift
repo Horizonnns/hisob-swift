@@ -81,19 +81,18 @@ struct ExpenseRow: View {
         HStack(spacing: DS.Spacing.m) {
                 icon
 
+                // Дата ушла в заголовок дня. У обычной траты второй строки
+                // теперь нет вовсе — строка стала ниже и спокойнее.
                 VStack(alignment: .leading, spacing: 2) {
                     Text(expense.title.isEmpty ? CategoryPresentation.title(expense.category) : expense.title)
                         .font(DS.Typography.body)
                         .lineLimit(1)
 
-                    HStack(spacing: DS.Spacing.xs) {
-                        Text(expense.date.formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: "ru_RU"))))
-                        if expense.isGroup {
-                            Text("· \(expense.items.count) \(L.Month.positions)")
-                        }
+                    if expense.isGroup {
+                        Text("\(expense.items.count) \(L.Month.positions)")
+                            .font(DS.Typography.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .font(DS.Typography.caption)
-                    .foregroundStyle(.secondary)
                 }
 
                 Spacer(minLength: DS.Spacing.s)
