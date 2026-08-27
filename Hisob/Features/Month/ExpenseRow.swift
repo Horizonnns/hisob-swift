@@ -26,24 +26,49 @@ struct ExpenseRow: View {
             }
 
             if expense.isGroup, isExpanded {
-                VStack(spacing: DS.Spacing.xs) {
-                    ForEach(expense.items) { item in
-                        HStack {
-                            Text(item.title)
-                                .font(DS.Typography.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer(minLength: DS.Spacing.s)
-                            Text(MoneyFormat.number(item.amount))
-                                .font(DS.Typography.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .padding(.leading, 44)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                items
+                    // Только прозрачность. Со сдвигом сверху позиции наезжали
+                    // на шапку — раскрытие читалось как рывок, а не как рост.
+                    .transition(.opacity)
             }
         }
         .padding(.vertical, DS.Spacing.s)
+    }
+
+    /// Позиции группы — вложенной карточкой, а не плоским серым списком:
+    /// так видно, где группа началась и где кончилась.
+    private var items: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(expense.items.enumerated()), id: \.element.id) { index, item in
+                if index > 0 {
+                    Rectangle()
+                        .fill(DS.Palette.separator)
+                        .frame(height: 0.5)
+                        .padding(.leading, DS.Spacing.m)
+                }
+
+                HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.m) {
+                    Text(item.title)
+                        .font(DS.Typography.caption)
+                        .lineLimit(2)
+
+                    Spacer(minLength: DS.Spacing.s)
+
+                    Text(MoneyFormat.number(item.amount))
+                        .font(DS.Typography.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, DS.Spacing.m)
+                .padding(.vertical, DS.Spacing.s)
+            }
+        }
+        .background(
+            DS.Palette.surfaceElevated,
+            in: RoundedRectangle(cornerRadius: DS.Radius.tile, style: .continuous)
+        )
+        // 44 = ширина иконки (32) плюс отступ до заголовка (12): позиции
+        // встают ровно под названием группы.
+        .padding(.leading, 44)
     }
 
     private func toggle() {
