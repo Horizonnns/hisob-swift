@@ -18,7 +18,18 @@ private struct GlassSurface: ViewModifier {
             var glass = Glass.regular
             if let tint { glass = glass.tint(tint) }
             if isInteractive { glass = glass.interactive() }
-            return AnyView(content.glassEffect(glass, in: shape))
+            // На чистом чёрном карточка держится только за счёт светлоты и
+            // почти сливается с фоном. Волосяная граница возвращает ей форму.
+            // Крашеным поверхностям она не нужна — там форму задаёт заливка.
+            return AnyView(
+                content
+                    .glassEffect(glass, in: shape)
+                    .overlay {
+                        if tint == nil {
+                            shape.strokeBorder(DS.Palette.separator, lineWidth: 0.5)
+                        }
+                    }
+            )
         } else {
             return AnyView(
                 content
