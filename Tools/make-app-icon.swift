@@ -27,10 +27,10 @@ guard let context = CGContext(
     fatalError("Не удалось создать контекст")
 }
 
-// Фон: градиент тёплого янтаря — акцент из дизайн-системы.
+// Фон: градиент приглушённого янтаря — акцент из дизайн-системы.
 let colors = [
-    CGColor(red: 1.00, green: 0.69, blue: 0.18, alpha: 1),
-    CGColor(red: 0.77, green: 0.44, blue: 0.03, alpha: 1)
+    CGColor(red: 0.77, green: 0.64, blue: 0.41, alpha: 1),
+    CGColor(red: 0.54, green: 0.42, blue: 0.18, alpha: 1)
 ] as CFArray
 
 guard let gradient = CGGradient(
