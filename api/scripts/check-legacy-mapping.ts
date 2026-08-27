@@ -150,11 +150,10 @@ check('Неполный проект в выгрузке называется п
 	)
 })
 
-check('Искусственная запись помечена исключением с причиной', () => {
-	const id = 'cmsumhcu00135l3040xdv8bbq'
-	const reason = exclusionReason(id)
-	assert.ok(reason, 'запись должна быть в списке исключений')
-	assert.match(reason, /9 980|остаток/, 'причина должна объяснять, почему запись искусственная')
+check('Выгрузка переносится без исключений', () => {
+	assert.equal(Object.keys(EXCLUDED_EXPENSES).length, 0,
+		'исключений быть не должно: данные переносятся один в один')
+	assert.equal(exclusionReason('cmsumhcu00135l3040xdv8bbq'), null)
 })
 
 check('Обычная запись не исключается', () => {
