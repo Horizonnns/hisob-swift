@@ -14,8 +14,11 @@
  *   3. в корне `src/` нет файлов, кроме точек входа;
  *   4. каждая такая точка экспортирует по умолчанию функцию-обработчик
  *      в нодовском соглашении `(req, res)` — проверяем настоящим запросом
- *      через `http.createServer`, а не вызовом с `Request`: именно на этом
- *      различии функция висела до таймаута, а проверка молчала.
+ *      через `http.createServer`, а не вызовом с `Request`;
+ *   5. запрос **с телом** обрабатывается в обоих случаях: когда тело ещё
+ *      в потоке и когда платформа прочитала его за нас и положила в
+ *      `req.body`. Второй случай — то, на чём POST/PUT висели до таймаута,
+ *      а проверка молчала, потому что дёргала только GET.
  *
  * Запуск: npm run check:bundle
  */
@@ -143,6 +146,10 @@ try {
 		server.close()
 	}
 
+	// Запрос с телом — в двух режимах доставки.
+	await checkBodyHandling(entry.default, 'тело в потоке', false)
+	await checkBodyHandling(entry.default, 'тело прочитано платформой', true)
+
 	console.log(
 		`Точек входа в src/: ${entryNames.join(', ')} — все отдают обработчик, ` +
 		'/api/health отвечает 200.'
@@ -153,4 +160,70 @@ try {
 	process.exit(1)
 } finally {
 	rmSync(workDir, { recursive: true, force: true })
+}
+
+/**
+ * Шлёт POST с телом и убеждается, что обработчик его прочитал.
+ *
+ * `preParsed` повторяет поведение платформы: она вычитывает поток сама
+ * и кладёт разобранное тело в `req.body`. Обработчик, читающий только
+ * поток, в этом режиме ждёт данных вечно.
+ */
+async function checkBodyHandling(handler, label, preParsed) {
+	// Токен нужен, чтобы запрос дошёл до разбора тела: авторизация раньше.
+	process.env.HISOB_API_TOKEN = 'check-bundle-token'
+
+	const server = http.createServer(async (request, response) => {
+		if (preParsed) {
+			const chunks = []
+			for await (const chunk of request) chunks.push(chunk)
+			const raw = Buffer.concat(chunks)
+			request.body = raw.length > 0 ? JSON.parse(raw.toString('utf8')) : undefined
+		}
+		handler(request, response)
+	})
+
+	await new Promise(resolve => server.listen(0, resolve))
+	const { port } = server.address()
+
+	try {
+		const controller = new AbortController()
+		const timer = setTimeout(() => controller.abort(), 5000)
+		let response
+		try {
+			response = await fetch(`http://127.0.0.1:${port}/api/expenses`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: 'Bearer check-bundle-token'
+				},
+				body: JSON.stringify({ id: 'заведомо не uuid' }),
+				signal: controller.signal
+			})
+		} catch (cause) {
+			if (cause?.name === 'AbortError') {
+				throw new Error(
+					`Запрос с телом (${label}) не получил ответа за 5 секунд. ` +
+					'Обработчик читает тело только из потока — на платформе, ' +
+					'которая разбирает его заранее, POST и PUT будут висеть ' +
+					'до FUNCTION_INVOCATION_TIMEOUT.'
+				)
+			}
+			throw cause
+		} finally {
+			clearTimeout(timer)
+		}
+
+		// 400 означает, что тело прочитано и отвергнуто валидацией — то,
+		// что нам и нужно проверить. 401 значил бы, что до тела не дошли.
+		if (response.status !== 400) {
+			throw new Error(
+				`Запрос с телом (${label}) вернул ${response.status}, ожидался 400 ` +
+				'— признак того, что тело прочитано и провалило валидацию.'
+			)
+		}
+	} finally {
+		server.close()
+		delete process.env.HISOB_API_TOKEN
+	}
 }
