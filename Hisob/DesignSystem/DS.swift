@@ -36,8 +36,13 @@ extension DS {
 
 extension DS {
     enum Palette {
-        /// Акцент бренда — унаследован от веб-версии.
-        static let brand = dynamic(light: 0x4F46E5, dark: 0x5B4FFF)
+        /// Акцент бренда.
+        ///
+        /// Тёплый янтарь вместо унаследованного от веба сине-фиолетового:
+        /// тот спорил и с синим остатка, и с фиолетовым переноса, а на
+        /// чёрном фоне выглядел кричаще. Янтарь не пересекается ни с
+        /// зелёным дохода, ни с красным расхода.
+        static let brand = dynamic(light: 0xB4740A, dark: 0xFFB02E)
 
         /// Доход.
         static let income = dynamic(light: 0x059669, dark: 0x10B981)
@@ -48,8 +53,9 @@ extension DS {
         static let destructive = dynamic(light: 0xB3261E, dark: 0xD22B2B)
         /// Остаток.
         static let remaining = dynamic(light: 0x2563EB, dark: 0x3B82F6)
-        /// Перенос из прошлого месяца.
-        static let carryover = dynamic(light: 0x4F46E5, dark: 0x6366F1)
+        /// Перенос из прошлого месяца. Приглушённый лиловый: рядом с
+        /// янтарным акцентом насыщенный индиго перетягивал внимание.
+        static let carryover = dynamic(light: 0x7C6BAF, dark: 0x9B8CD6)
 
         /// Фон экрана. В тёмной теме — чистый чёрный, как в ночной теме
         /// Telegram: на OLED он гаснет полностью, и карточки читаются
