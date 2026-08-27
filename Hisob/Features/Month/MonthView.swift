@@ -175,27 +175,15 @@ struct MonthView: View {
                         ExpenseRow(expense: expense, currency: viewModel.currency,
                                    expandedIDs: $expandedIDs)
                             .listRowBackground(Color.clear)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    Task { await viewModel.deleteExpense(expense) }
-                                } label: {
-                                    Label(L.Common.delete, systemImage: "trash")
-                                }
-                            }
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                Button {
-                                    editingExpense = expense
-                                } label: {
-                                    Label(L.Common.edit, systemImage: "pencil")
-                                }
-                                .tint(DS.Palette.brand)
-                            }
                             // Нажатие с удержанием: фон размывается, строка
                             // поднимается отдельной карточкой, меню раскрывается
                             // рядом. Превью задаём своё — иначе система
                             // приподнимает строку как есть, без подложки,
                             // и она сливается с фоном.
                             .contextMenu {
+                                // Цвета пунктов меню рисует система, `.tint`
+                                // здесь не работает: правка идёт нейтральным
+                                // белым, удаление — системным красным по роли.
                                 Button {
                                     editingExpense = expense
                                 } label: {
