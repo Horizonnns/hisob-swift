@@ -10,6 +10,8 @@ struct CategoryDonutChart: View {
     let centerAmount: Money
     let selected: ExpenseCategory?
     let onSelect: (ExpenseCategory) -> Void
+    /// Перевод угла в категорию — знает только вью-модель.
+    let categoryAt: (Double) -> ExpenseCategory?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -26,7 +28,7 @@ struct CategoryDonutChart: View {
         Chart(slices) { slice in
             SectorMark(
                 angle: .value(L.Analytics.amount, slice.plotValue),
-                innerRadius: .ratio(0.64),
+                innerRadius: .ratio(0.62),
                 angularInset: 2
             )
             .cornerRadius(6)
@@ -34,7 +36,24 @@ struct CategoryDonutChart: View {
             .opacity(opacity(for: slice.category))
         }
         .chartLegend(.hidden)
-        .frame(height: 200)
+        // Диаграмма — главное на экране, ей и место. И по ней можно попасть
+        // пальцем: раньше выбрать категорию можно было только через легенду.
+        .frame(height: 300)
+        // `chartAngleSelection` молчит и на тап, и на драг, поэтому попадание
+        // считаем сами: точнее и без сюрпризов при смене SDK.
+        .chartOverlay { proxy in
+            GeometryReader { geometry in
+                if let anchor = proxy.plotFrame {
+                    let frame = geometry[anchor]
+                    Color.clear
+                        .contentShape(.rect)
+                        .onTapGesture { location in
+                            select(at: location, in: frame)
+                        }
+                }
+            }
+        }
+        .sensoryFeedback(.selection, trigger: selected)
         .animation(DS.Motion.resolved(DS.Motion.smooth, reduceMotion: reduceMotion), value: slices)
         .overlay {
             VStack(spacing: 2) {
@@ -54,6 +73,7 @@ struct CategoryDonutChart: View {
             }
             .padding(.horizontal, DS.Spacing.xxl)
             .allowsHitTesting(false)
+            .animation(DS.Motion.resolved(DS.Motion.quick, reduceMotion: reduceMotion), value: selected)
         }
         .accessibilityLabel(L.Analytics.byCategory)
     }
@@ -94,6 +114,27 @@ struct CategoryDonutChart: View {
             }
         }
         .animation(DS.Motion.resolved(DS.Motion.quick, reduceMotion: reduceMotion), value: selected)
+    }
+
+    /// Тап по кольцу выбирает сектор, тап по «дырке» и мимо кольца — снимает
+    /// выбор. SectorMark считает угол от 12 часов по часовой стрелке.
+    private func select(at location: CGPoint, in frame: CGRect) {
+        let dx = location.x - frame.midX
+        let dy = location.y - frame.midY
+        let outerRadius = min(frame.width, frame.height) / 2
+        let radius = (dx * dx + dy * dy).squareRoot()
+
+        guard radius >= outerRadius * 0.62, radius <= outerRadius else {
+            if let selected { onSelect(selected) }
+            return
+        }
+
+        var angle = atan2(dx, -dy)
+        if angle < 0 { angle += 2 * .pi }
+
+        let total = slices.reduce(0) { $0 + $1.plotValue }
+        guard total > 0, let category = categoryAt(angle / (2 * .pi) * total) else { return }
+        onSelect(category)
     }
 
     /// Невыбранные категории приглушаются, а не скрываются: так видно долю

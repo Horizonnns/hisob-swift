@@ -59,7 +59,8 @@ struct AnalyticsView: View {
                     centerLabel: viewModel.centerLabel,
                     centerAmount: viewModel.centerAmount,
                     selected: viewModel.selectedCategory,
-                    onSelect: viewModel.toggleSelection
+                    onSelect: viewModel.toggleSelection,
+                    categoryAt: viewModel.category(atAngleValue:)
                 )
             } else {
                 EmptyStateView(

@@ -52,6 +52,20 @@ final class AnalyticsViewModel {
         calculator.summary(store.ledger, for: month)
     }
 
+    /// Переводит угол, по которому попал палец, в категорию.
+    ///
+    /// `chartAngleSelection` отдаёт позицию вдоль суммы всех секторов,
+    /// а не сам сектор — сопоставляем, накапливая доли в том же
+    /// порядке, в каком они нарисованы.
+    func category(atAngleValue value: Double) -> ExpenseCategory? {
+        var accumulated = 0.0
+        for slice in slices {
+            accumulated += slice.plotValue
+            if value <= accumulated { return slice.category }
+        }
+        return nil
+    }
+
     var slices: [CategorySlice] {
         analytics
             .byCategory(store.ledger.expenses(in: month, calendar: calendar))
