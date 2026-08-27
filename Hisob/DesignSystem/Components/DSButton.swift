@@ -35,7 +35,7 @@ struct DSButton: View {
 
     private var foreground: Color {
         switch kind {
-        case .primary: .white
+        case .primary: DS.Palette.onBrand
         case .secondary: .primary
         case .ghost: DS.Palette.brand
         case .danger: .white

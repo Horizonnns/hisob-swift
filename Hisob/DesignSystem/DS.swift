@@ -44,6 +44,11 @@ extension DS {
         /// зелёным дохода, ни с красным расхода.
         static let brand = dynamic(light: 0xB4740A, dark: 0xFFB02E)
 
+        /// Контент поверх акцента. В тёмной теме янтарь светлый, и белым по
+        /// нему не прочитать — там почти чёрные чернила; в светлой акцент
+        /// тёмно-янтарный, и наоборот.
+        static let onBrand = dynamic(light: 0xFFFFFF, dark: 0x1A1206)
+
         /// Доход.
         static let income = dynamic(light: 0x059669, dark: 0x10B981)
         /// Расход и перерасход.

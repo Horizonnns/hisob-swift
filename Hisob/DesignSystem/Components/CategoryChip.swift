@@ -19,14 +19,16 @@ struct CategoryChip: View {
                     .font(DS.Typography.caption)
                 Text("\(count)")
                     .font(DS.Typography.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isSelected ? DS.Palette.onBrand.opacity(0.7) : .secondary)
             }
             .padding(.horizontal, DS.Spacing.m)
             .padding(.vertical, DS.Spacing.s)
             .contentShape(.rect)
         }
         .buttonStyle(.pressable(scale: 0.96))
-        .foregroundStyle(isSelected ? DS.Palette.brand : .primary)
+        // Выбранный чип заливается акцентом, поэтому подпись на нём — не
+        // акцентом же (иначе текст пропадает), а контрастными чернилами.
+        .foregroundStyle(isSelected ? DS.Palette.onBrand : .primary)
         .dsGlass(
             cornerRadius: DS.Radius.chip,
             tint: isSelected ? DS.Palette.brand : nil,
