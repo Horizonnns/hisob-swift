@@ -29,11 +29,9 @@ struct IncomeSourcesView: View {
         List {
             switch viewModel.state {
             case .loading:
-                ForEach(0..<3, id: \.self) { _ in
-                    SkeletonBlock(height: 52)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
+                SourcesSkeleton()
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
 
             case .failed(let message):
                 ErrorStateView(message: message) {

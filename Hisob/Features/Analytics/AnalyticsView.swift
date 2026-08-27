@@ -40,9 +40,11 @@ struct AnalyticsView: View {
         switch viewModel.state {
         case .loading:
             VStack(spacing: DS.Spacing.l) {
-                SkeletonBlock(height: 260, cornerRadius: DS.Radius.card)
-                SkeletonBlock(height: 220, cornerRadius: DS.Radius.card)
+                SkeletonBlock(height: 300, cornerRadius: DS.Radius.card)
+                SkeletonBlock(height: 96, cornerRadius: DS.Radius.card)
+                SkeletonBlock(height: 240, cornerRadius: DS.Radius.card)
             }
+            .shimmering()
 
         case .failed(let message):
             ErrorStateView(message: message) {

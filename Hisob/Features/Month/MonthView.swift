@@ -62,6 +62,7 @@ struct MonthView: View {
 
     // MARK: - Шапка
 
+    @ViewBuilder
     private var header: some View {
         VStack(spacing: DS.Spacing.l) {
             MonthSwitcher(
@@ -72,10 +73,14 @@ struct MonthView: View {
                 onCurrent: viewModel.goToCurrentMonth
             )
 
-            statTiles
+            // Во время загрузки плашки не показываем: нули вместо сумм
+            // читаются как настоящие данные.
+            if viewModel.state != .loading {
+                statTiles
 
-            if !viewModel.categoryCounts.isEmpty {
-                categoryFilter
+                if !viewModel.categoryCounts.isEmpty {
+                    categoryFilter
+                }
             }
         }
     }
@@ -141,11 +146,11 @@ struct MonthView: View {
         switch viewModel.state {
         case .loading:
             Section {
-                ForEach(0..<5, id: \.self) { _ in
-                    SkeletonBlock(height: 44)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
+                MonthSkeleton()
+                    .listRowInsets(EdgeInsets(top: 0, leading: DS.Spacing.screen,
+                                              bottom: DS.Spacing.l, trailing: DS.Spacing.screen))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
 
         case .failed(let message):
