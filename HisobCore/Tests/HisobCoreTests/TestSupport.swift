@@ -33,5 +33,14 @@ func expense(
     .single(date: date, category: category, title: title, amount: money(amount))
 }
 
+func receipt(
+    _ amount: String,
+    on date: Date,
+    kind: ReceiptKind = .gift,
+    title: String = "подарок"
+) -> Receipt {
+    Receipt(date: date, kind: kind, title: title, amount: money(amount))
+}
+
 let calculator = LedgerCalculator(calendar: utc)
 let analytics = Analytics(calendar: utc)

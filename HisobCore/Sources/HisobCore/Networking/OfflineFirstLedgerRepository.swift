@@ -73,6 +73,18 @@ public actor OfflineFirstLedgerRepository: LedgerRepository {
         try await write(.deleteExpense(expenseID))
     }
 
+    public func add(_ receipt: Receipt) async throws {
+        try await write(.addReceipt(receipt))
+    }
+
+    public func update(_ receipt: Receipt) async throws {
+        try await write(.updateReceipt(receipt))
+    }
+
+    public func delete(receiptID: Receipt.ID) async throws {
+        try await write(.deleteReceipt(receiptID))
+    }
+
     public func save(_ source: IncomeSource) async throws {
         try await write(.saveSource(source))
     }

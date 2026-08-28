@@ -32,6 +32,24 @@ public actor InMemoryLedgerRepository: LedgerRepository {
         ledger.expenses.remove(at: index)
     }
 
+    public func add(_ receipt: Receipt) async throws {
+        ledger.receipts.append(receipt)
+    }
+
+    public func update(_ receipt: Receipt) async throws {
+        guard let index = ledger.receipts.firstIndex(where: { $0.id == receipt.id }) else {
+            throw LedgerRepositoryError.receiptNotFound(receipt.id)
+        }
+        ledger.receipts[index] = receipt
+    }
+
+    public func delete(receiptID: Receipt.ID) async throws {
+        guard let index = ledger.receipts.firstIndex(where: { $0.id == receiptID }) else {
+            throw LedgerRepositoryError.receiptNotFound(receiptID)
+        }
+        ledger.receipts.remove(at: index)
+    }
+
     public func save(_ source: IncomeSource) async throws {
         if let index = ledger.sources.firstIndex(where: { $0.id == source.id }) {
             ledger.sources[index] = source

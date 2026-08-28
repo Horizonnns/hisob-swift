@@ -8,6 +8,36 @@ struct LedgerDTO: Codable, Sendable {
     var currency: String
     var sources: [IncomeSourceDTO]
     var expenses: [ExpenseDTO]
+    var receipts: [ReceiptDTO]
+
+    /// Сервер старой версии поля не пришлёт — читаем как пустой список,
+    /// иначе приложение перестало бы открываться после обновления клиента.
+    enum CodingKeys: String, CodingKey {
+        case currency, sources, expenses, receipts
+    }
+
+    init(currency: String, sources: [IncomeSourceDTO], expenses: [ExpenseDTO], receipts: [ReceiptDTO] = []) {
+        self.currency = currency
+        self.sources = sources
+        self.expenses = expenses
+        self.receipts = receipts
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        currency = try container.decode(String.self, forKey: .currency)
+        sources = try container.decode([IncomeSourceDTO].self, forKey: .sources)
+        expenses = try container.decode([ExpenseDTO].self, forKey: .expenses)
+        receipts = try container.decodeIfPresent([ReceiptDTO].self, forKey: .receipts) ?? []
+    }
+}
+
+struct ReceiptDTO: Codable, Sendable {
+    var id: WireUUID
+    var date: String
+    var kind: String
+    var title: String
+    var amount: String
 }
 
 struct IncomeSourceDTO: Codable, Sendable {
@@ -62,6 +92,29 @@ extension ExpenseDTO {
                 ExpenseItemDTO(id: WireUUID($0.id), amount: MoneyWire.string($0.amount), title: $0.title)
             }
         }
+    }
+}
+
+extension ReceiptDTO {
+    init(_ receipt: Receipt, calendar: Calendar) {
+        self.id = WireUUID(receipt.id)
+        self.date = DayString.string(from: receipt.date, calendar: calendar)
+        self.kind = receipt.kind.rawValue
+        self.title = receipt.title
+        self.amount = MoneyWire.string(receipt.amount)
+    }
+}
+
+extension ReceiptDTO {
+    func toDomain(calendar: Calendar) throws -> Receipt {
+        guard let date = DayString.date(from: date, calendar: calendar) else {
+            throw DTOMappingError.invalidDate(self.date)
+        }
+        guard let value = Money.parse(amount) else {
+            throw DTOMappingError.invalidAmount(amount)
+        }
+        return Receipt(id: id.value, date: date, kind: ReceiptKind(rawValue: kind),
+                       title: title, amount: value)
     }
 }
 
@@ -167,7 +220,8 @@ extension LedgerDTO {
         Ledger(
             currency: CurrencyCode(rawValue: currency),
             sources: try sources.map { try $0.toDomain(calendar: calendar) },
-            expenses: try expenses.map { try $0.toDomain(calendar: calendar) }
+            expenses: try expenses.map { try $0.toDomain(calendar: calendar) },
+            receipts: try receipts.map { try $0.toDomain(calendar: calendar) }
         )
     }
 }

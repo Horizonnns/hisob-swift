@@ -41,6 +41,28 @@ public struct RemoteLedgerRepository: LedgerRepository {
         try await client.send("/api/expenses/\(expenseID.wirePath)", method: "DELETE")
     }
 
+    public func add(_ receipt: Receipt) async throws {
+        _ = try await client.send(
+            "/api/receipts",
+            method: "POST",
+            body: ReceiptDTO(receipt, calendar: calendar),
+            as: ReceiptDTO.self
+        )
+    }
+
+    public func update(_ receipt: Receipt) async throws {
+        _ = try await client.send(
+            "/api/receipts/\(receipt.id.wirePath)",
+            method: "PATCH",
+            body: ReceiptDTO(receipt, calendar: calendar),
+            as: ReceiptDTO.self
+        )
+    }
+
+    public func delete(receiptID: Receipt.ID) async throws {
+        try await client.send("/api/receipts/\(receiptID.wirePath)", method: "DELETE")
+    }
+
     public func save(_ source: IncomeSource) async throws {
         _ = try await client.send(
             "/api/sources/\(source.id.wirePath)",

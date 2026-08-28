@@ -15,6 +15,10 @@ public protocol LedgerRepository: Sendable {
     func update(_ expense: Expense) async throws
     func delete(expenseID: Expense.ID) async throws
 
+    func add(_ receipt: Receipt) async throws
+    func update(_ receipt: Receipt) async throws
+    func delete(receiptID: Receipt.ID) async throws
+
     /// Создаёт источник или обновляет существующий по `id`.
     func save(_ source: IncomeSource) async throws
     func delete(sourceID: IncomeSource.ID) async throws
@@ -34,5 +38,6 @@ extension LedgerRepository {
 /// Ошибки хранилища.
 public enum LedgerRepositoryError: Error, Equatable, Sendable {
     case expenseNotFound(Expense.ID)
+    case receiptNotFound(Receipt.ID)
     case sourceNotFound(IncomeSource.ID)
 }

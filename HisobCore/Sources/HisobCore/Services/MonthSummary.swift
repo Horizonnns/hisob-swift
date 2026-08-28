@@ -20,8 +20,12 @@ public struct MonthSummary: Hashable, Sendable {
     public let currency: CurrencyCode
     /// Суммарный доход всех источников, активных в этом месяце.
     public let income: Money
-    /// Из чего сложился доход.
+    /// Из чего сложился доход по местам работы.
     public let incomeBreakdown: [IncomeShare]
+    /// Разовые поступления месяца — они уже входят в `income`.
+    public let receipts: Money
+    /// Из чего сложились разовые поступления.
+    public let receiptBreakdown: [ReceiptShare]
     /// Потрачено за месяц — все траты, независимо от привязки к источнику.
     public let spent: Money
     /// Остаток, перешедший из предыдущих месяцев.
@@ -34,6 +38,8 @@ public struct MonthSummary: Hashable, Sendable {
         currency: CurrencyCode,
         income: Money,
         incomeBreakdown: [IncomeShare],
+        receipts: Money = .zero,
+        receiptBreakdown: [ReceiptShare] = [],
         spent: Money,
         carryover: Money
     ) {
@@ -41,7 +47,22 @@ public struct MonthSummary: Hashable, Sendable {
         self.currency = currency
         self.income = income
         self.incomeBreakdown = incomeBreakdown
+        self.receipts = receipts
+        self.receiptBreakdown = receiptBreakdown
         self.spent = spent
         self.carryover = carryover
+    }
+}
+
+/// Доля одного вида разовых поступлений в месяце.
+public struct ReceiptShare: Identifiable, Hashable, Sendable {
+    public let kind: ReceiptKind
+    public let amount: Money
+
+    public var id: ReceiptKind { kind }
+
+    public init(kind: ReceiptKind, amount: Money) {
+        self.kind = kind
+        self.amount = amount
     }
 }

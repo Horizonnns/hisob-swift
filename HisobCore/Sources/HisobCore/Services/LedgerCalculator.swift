@@ -22,12 +22,35 @@ public struct LedgerCalculator: Sendable {
 
     // MARK: - Доход
 
-    /// Суммарный доход за месяц по всем источникам.
+    /// Суммарный доход за месяц: оклады плюс разовые поступления.
     ///
     /// Раньше оклад брался у одного проекта; теперь источники складываются,
     /// и завершённые в расчёт не попадают (см. `IncomeSource.endedAt`).
+    /// Подарки и возвраты входят сюда же — это те же деньги, и тратятся они
+    /// из общего котла.
     public func income(_ ledger: Ledger, in month: YearMonth) -> Money {
+        salaries(ledger, in: month) + receipts(ledger, in: month)
+    }
+
+    /// Только оклады, без разовых поступлений.
+    public func salaries(_ ledger: Ledger, in month: YearMonth) -> Money {
         ledger.sources.reduce(Money.zero) { $0 + $1.salary(in: month, calendar: calendar) }
+    }
+
+    /// Только разовые поступления за месяц.
+    public func receipts(_ ledger: Ledger, in month: YearMonth) -> Money {
+        ledger.receipts
+            .filter { month.contains($0.date, calendar: calendar) }
+            .reduce(Money.zero) { $0 + $1.amount }
+    }
+
+    /// Разбивка разовых поступлений по видам; виды без сумм отброшены.
+    public func receiptBreakdown(_ ledger: Ledger, in month: YearMonth) -> [ReceiptShare] {
+        Dictionary(grouping: ledger.receipts.filter { month.contains($0.date, calendar: calendar) },
+                   by: \.kind)
+            .map { ReceiptShare(kind: $0.key, amount: $0.value.reduce(Money.zero) { $0 + $1.amount }) }
+            .filter { $0.amount > .zero }
+            .sorted { $0.amount > $1.amount }
     }
 
     /// Разбивка дохода по источникам; источники без дохода отброшены.
@@ -61,10 +84,10 @@ public struct LedgerCalculator: Sendable {
     /// В веб-версии цепочка считалась внутри проекта и на смене работы
     /// обрывалась.
     ///
-    /// Начало цепочки — первый месяц с тратами: месяцы до начала учёта
+    /// Начало цепочки — первый месяц с записями: месяцы до начала учёта
     /// достоверных данных не содержат.
     public func carryover(_ ledger: Ledger, before month: YearMonth) -> Money {
-        guard let start = ledger.firstExpenseMonth(calendar: calendar), start < month else {
+        guard let start = ledger.firstRecordedMonth(calendar: calendar), start < month else {
             return .zero
         }
 
@@ -86,6 +109,8 @@ public struct LedgerCalculator: Sendable {
             currency: ledger.currency,
             income: income(ledger, in: month),
             incomeBreakdown: incomeBreakdown(ledger, in: month),
+            receipts: receipts(ledger, in: month),
+            receiptBreakdown: receiptBreakdown(ledger, in: month),
             spent: spent(ledger, in: month),
             carryover: carryover(ledger, before: month)
         )

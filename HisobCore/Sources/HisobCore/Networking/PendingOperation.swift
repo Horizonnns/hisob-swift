@@ -9,6 +9,9 @@ public enum PendingOperation: Codable, Hashable, Sendable {
     case addExpense(Expense)
     case updateExpense(Expense)
     case deleteExpense(Expense.ID)
+    case addReceipt(Receipt)
+    case updateReceipt(Receipt)
+    case deleteReceipt(Receipt.ID)
     case saveSource(IncomeSource)
     case deleteSource(IncomeSource.ID)
     case setCurrency(CurrencyCode)
@@ -32,6 +35,20 @@ extension PendingOperation {
 
         case .deleteExpense(let id):
             ledger.expenses.removeAll { $0.id == id }
+
+        case .addReceipt(let receipt):
+            if let index = ledger.receipts.firstIndex(where: { $0.id == receipt.id }) {
+                ledger.receipts[index] = receipt
+            } else {
+                ledger.receipts.append(receipt)
+            }
+
+        case .updateReceipt(let receipt):
+            guard let index = ledger.receipts.firstIndex(where: { $0.id == receipt.id }) else { return }
+            ledger.receipts[index] = receipt
+
+        case .deleteReceipt(let id):
+            ledger.receipts.removeAll { $0.id == id }
 
         case .saveSource(let source):
             if let index = ledger.sources.firstIndex(where: { $0.id == source.id }) {
@@ -57,6 +74,9 @@ extension PendingOperation {
         case .addExpense(let expense): try await repository.add(expense)
         case .updateExpense(let expense): try await repository.update(expense)
         case .deleteExpense(let id): try await repository.delete(expenseID: id)
+        case .addReceipt(let receipt): try await repository.add(receipt)
+        case .updateReceipt(let receipt): try await repository.update(receipt)
+        case .deleteReceipt(let id): try await repository.delete(receiptID: id)
         case .saveSource(let source): try await repository.save(source)
         case .deleteSource(let id): try await repository.delete(sourceID: id)
         case .setCurrency(let currency): try await repository.setCurrency(currency)
@@ -90,6 +110,20 @@ extension Array where Element == PendingOperation {
                 result.removeAll { $0.touchesExpense(id) }
                 if !hadUnsentAdd { result.append(operation) }
 
+            case .updateReceipt(let receipt):
+                if let index = result.lastIndex(where: { $0.touchesReceipt(receipt.id) }) {
+                    result[index] = result[index].isAddReceipt
+                        ? .addReceipt(receipt)
+                        : .updateReceipt(receipt)
+                } else {
+                    result.append(operation)
+                }
+
+            case .deleteReceipt(let id):
+                let hadUnsentAdd = result.contains { $0.isAddReceipt && $0.touchesReceipt(id) }
+                result.removeAll { $0.touchesReceipt(id) }
+                if !hadUnsentAdd { result.append(operation) }
+
             case .saveSource(let source):
                 result.removeAll { $0.touchesSource(source.id) }
                 result.append(operation)
@@ -102,7 +136,7 @@ extension Array where Element == PendingOperation {
                 result.removeAll(where: \.isCurrency)
                 result.append(operation)
 
-            case .addExpense:
+            case .addExpense, .addReceipt:
                 result.append(operation)
             }
         }
@@ -117,6 +151,11 @@ private extension PendingOperation {
         return false
     }
 
+    var isAddReceipt: Bool {
+        if case .addReceipt = self { return true }
+        return false
+    }
+
     var isCurrency: Bool {
         if case .setCurrency = self { return true }
         return false
@@ -126,6 +165,14 @@ private extension PendingOperation {
         switch self {
         case .addExpense(let expense), .updateExpense(let expense): expense.id == id
         case .deleteExpense(let target): target == id
+        default: false
+        }
+    }
+
+    func touchesReceipt(_ id: Receipt.ID) -> Bool {
+        switch self {
+        case .addReceipt(let receipt), .updateReceipt(let receipt): receipt.id == id
+        case .deleteReceipt(let target): target == id
         default: false
         }
     }
