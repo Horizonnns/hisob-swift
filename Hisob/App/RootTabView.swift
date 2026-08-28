@@ -25,31 +25,27 @@ struct RootTabView: View {
                 MonthView(viewModel: monthViewModel)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
-            .tabItem { Label(AppTab.month.title, systemImage: AppTab.month.symbol) }
+            .tabItem { Label(AppTab.month.tabBarTitle, systemImage: AppTab.month.symbol) }
             .tag(AppTab.month)
 
             NavigationStack(path: $router.analyticsPath) {
                 AnalyticsView(viewModel: AnalyticsViewModel(store: store))
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
-            .tabItem { Label(AppTab.analytics.title, systemImage: AppTab.analytics.symbol) }
+            .tabItem { Label(AppTab.analytics.tabBarTitle, systemImage: AppTab.analytics.symbol) }
             .tag(AppTab.analytics)
 
             NavigationStack(path: $router.settingsPath) {
                 SettingsView(store: store, connection: connection, lock: lock, path: $router.settingsPath)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
-            .tabItem { Label(AppTab.settings.title, systemImage: AppTab.settings.symbol) }
+            .tabItem { Label(AppTab.settings.tabBarTitle, systemImage: AppTab.settings.symbol) }
             .tag(AppTab.settings)
         }
         .tint(DS.Palette.brand)
         // Системное сжатие панели при прокрутке — родное поведение iOS 26.
         .nativeTabBarMinimize()
-        .tabAccessory(
-            showsAdd: router.selectedTab == .month,
-            remaining: monthViewModel.summary.remaining,
-            currency: monthViewModel.currency
-        ) {
+        .addExpenseButton(isVisible: router.selectedTab == .month) {
             isAddingExpense = true
         }
         .sheet(isPresented: $isAddingExpense) {
