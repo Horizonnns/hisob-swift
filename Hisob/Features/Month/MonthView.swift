@@ -74,7 +74,12 @@ struct MonthView: View {
     }
 
     private var statTiles: some View {
-        MonthSummaryCard(summary: viewModel.summary, showsCarryover: viewModel.showsCarryover)
+        MonthSummaryCard(
+            summary: viewModel.summary,
+            showsCarryover: viewModel.showsCarryover,
+            onPrevious: viewModel.goToPreviousMonth,
+            onNext: viewModel.goToNextMonth
+        )
     }
 
     private var categoryFilter: some View {

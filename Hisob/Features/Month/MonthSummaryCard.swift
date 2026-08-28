@@ -9,6 +9,19 @@ import SwiftUI
 struct MonthSummaryCard: View {
     let summary: MonthSummary
     let showsCarryover: Bool
+    let onPrevious: () -> Void
+    let onNext: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Смещение под пальцем. Карточка идёт за ним с сопротивлением — так видно,
+    /// что жест распознан, но она не убегает с экрана.
+    @State private var dragOffset: CGFloat = 0
+    @State private var switchCount = 0
+
+    /// Порог срабатывания. Меньше — и месяц будет перелистываться от случайного
+    /// касания при прокрутке списка.
+    private let threshold: CGFloat = 56
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.m) {
@@ -46,6 +59,34 @@ struct MonthSummaryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Spacing.l)
         .dsGlass()
+        .offset(x: dragOffset)
+        .overlay {
+            HorizontalSwipe(onChange: follow, onEnd: finish)
+        }
+        .sensoryFeedback(.selection, trigger: switchCount)
+        // Жест недоступен VoiceOver, поэтому те же действия — отдельными
+        // пунктами ротора.
+        .accessibilityAction(named: L.Month.previousMonth, onPrevious)
+        .accessibilityAction(named: L.Month.nextMonth, onNext)
+    }
+
+    /// Смена месяца свайпом по карточке: влево — вперёд, вправо — назад, как
+    /// и стрелки над ней.
+    private func follow(_ dx: CGFloat) {
+        // Идём за пальцем с сопротивлением: видно, что жест распознан, но
+        // карточка не убегает с экрана.
+        dragOffset = dx / 3
+    }
+
+    private func finish(_ dx: CGFloat) {
+        withAnimation(DS.Motion.resolved(DS.Motion.snappy, reduceMotion: reduceMotion)) {
+            dragOffset = 0
+        }
+
+        guard abs(dx) > threshold else { return }
+
+        switchCount += 1
+        if dx < 0 { onNext() } else { onPrevious() }
     }
 
     private func stat(_ label: String, _ amount: Money,
