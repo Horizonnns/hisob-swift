@@ -12,6 +12,9 @@ struct ExpenseEditor: View {
     @FocusState private var focus: Field?
 
     let currency: CurrencyCode
+    /// Переключатель показывается только при создании: у существующей записи
+    /// вид уже определён, и менять расход на поступление на лету нельзя.
+    private let mode: Binding<EntryMode>?
     let onSave: (Expense) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
@@ -30,22 +33,29 @@ struct ExpenseEditor: View {
     ) {
         _draft = State(initialValue: ExpenseDraft(editing: expense))
         self.currency = currency
+        self.mode = nil
         self.onSave = onSave
     }
 
     init(
         defaultDate: Date,
         currency: CurrencyCode,
+        mode: Binding<EntryMode>? = nil,
         onSave: @escaping (Expense) async -> Bool
     ) {
         _draft = State(initialValue: ExpenseDraft(defaultDate: defaultDate))
         self.currency = currency
+        self.mode = mode
         self.onSave = onSave
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                if let mode {
+                    Section { EntryModePicker(mode: mode) }
+                }
+
                 Section {
                     Picker(L.Expense.kind, selection: $draft.kind) {
                         Text(L.Expense.singleKind).tag(ExpenseDraft.Kind.single)

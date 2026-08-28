@@ -5,6 +5,7 @@ struct MonthView: View {
     @State var viewModel: MonthViewModel
     @State private var expandedIDs: Set<Expense.ID> = []
     @State private var editingExpense: Expense?
+    @State private var editingReceipt: Receipt?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -33,6 +34,11 @@ struct MonthView: View {
         .sheet(item: $editingExpense) { expense in
             ExpenseEditor(editing: expense, currency: viewModel.currency) { updated in
                 await viewModel.updateExpense(updated)
+            }
+        }
+        .sheet(item: $editingReceipt) { receipt in
+            ReceiptEditor(editing: receipt, currency: viewModel.currency) { updated in
+                await viewModel.updateReceipt(updated)
             }
         }
         .task { await viewModel.load() }
@@ -145,7 +151,7 @@ struct MonthView: View {
             }
 
         case .loaded:
-            if viewModel.visibleExpenses.isEmpty {
+            if viewModel.isEmpty {
                 Section {
                     emptyState
                         .listRowBackground(Color.clear)
@@ -157,8 +163,11 @@ struct MonthView: View {
                 // перед глазами и сколько за него ушло.
                 ForEach(viewModel.visibleDays) { day in
                     Section {
-                        ForEach(day.expenses) { expense in
-                            expenseRow(expense)
+                        ForEach(day.entries) { entry in
+                            switch entry {
+                            case .expense(let expense): expenseRow(expense)
+                            case .receipt(let receipt): receiptRow(receipt)
+                            }
                         }
                     } header: {
                         dayHeader(day)
@@ -177,10 +186,45 @@ struct MonthView: View {
 
             Spacer(minLength: DS.Spacing.s)
 
-            Text(MoneyFormat.string(day.total, currency: viewModel.currency))
-                .font(DS.Typography.label.monospacedDigit())
-                .foregroundStyle(.secondary)
+            // Приход показываем только когда он был: пустой «+0» в каждом
+            // заголовке был бы шумом.
+            if day.received > .zero {
+                Text("+\(MoneyFormat.number(day.received))")
+                    .font(DS.Typography.label.monospacedDigit())
+                    .foregroundStyle(DS.Palette.income)
+            }
+
+            if day.spent > .zero {
+                Text(MoneyFormat.string(day.spent, currency: viewModel.currency))
+                    .font(DS.Typography.label.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
         }
+    }
+
+    private func receiptRow(_ receipt: Receipt) -> some View {
+        ReceiptRow(receipt: receipt, currency: viewModel.currency)
+            .listRowBackground(Color.clear)
+            .contextMenu {
+                Button {
+                    editingReceipt = receipt
+                } label: {
+                    Label(L.Common.edit, systemImage: "pencil")
+                }
+                .tint(Color.primary)
+
+                Button(role: .destructive) {
+                    Task { await viewModel.deleteReceipt(receipt) }
+                } label: {
+                    Label(L.Common.delete, systemImage: "trash")
+                }
+                .tint(DS.Palette.destructive)
+            } preview: {
+                ReceiptRow(receipt: receipt, currency: viewModel.currency)
+                    .padding(.horizontal, DS.Spacing.l)
+                    .frame(width: 320)
+                    .background(DS.Palette.surfaceElevated)
+            }
     }
 
     private func expenseRow(_ expense: Expense) -> some View {

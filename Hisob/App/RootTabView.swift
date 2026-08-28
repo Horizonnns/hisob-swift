@@ -49,10 +49,12 @@ struct RootTabView: View {
             isAddingExpense = true
         }
         .sheet(isPresented: $isAddingExpense) {
-            ExpenseEditor(defaultDate: monthViewModel.defaultDate,
-                          currency: monthViewModel.currency) { expense in
-                await monthViewModel.addExpense(expense)
-            }
+            EntryEditor(
+                defaultDate: monthViewModel.defaultDate,
+                currency: monthViewModel.currency,
+                onSaveExpense: { await monthViewModel.addExpense($0) },
+                onSaveReceipt: { await monthViewModel.addReceipt($0) }
+            )
         }
     }
 

@@ -29,6 +29,18 @@ enum L {
         static let collapseGroup = "Скрыть позиции"
     }
 
+    enum Receipt {
+        static let title = "Поступление"
+        static let add = "Добавить поступление"
+        static let edit = "Изменить поступление"
+        static let kind = "Вид"
+        static let source = "Откуда"
+        static let sourcePrompt = "Подарок на др, вернул долг…"
+        static let modeExpense = "Расход"
+        static let modeReceipt = "Поступление"
+        static let received = "Поступило"
+    }
+
     enum Analytics {
         static let byCategory = "Расходы по категориям"
         static let byMonth = "Расходы по месяцам"

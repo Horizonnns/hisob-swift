@@ -121,6 +121,43 @@ final class LedgerStore {
         }
     }
 
+    // MARK: - Поступления
+
+    @discardableResult
+    func add(_ receipt: Receipt) async -> Bool {
+        ledger.receipts.append(receipt)
+        return await perform(rollback: { [weak self] in
+            self?.ledger.receipts.removeAll { $0.id == receipt.id }
+        }) { [repository] in
+            try await repository.add(receipt)
+        }
+    }
+
+    @discardableResult
+    func update(_ receipt: Receipt) async -> Bool {
+        guard let index = ledger.receipts.firstIndex(where: { $0.id == receipt.id }) else { return false }
+        let previous = ledger.receipts[index]
+        ledger.receipts[index] = receipt
+        return await perform(rollback: { [weak self] in
+            guard let self, let index = ledger.receipts.firstIndex(where: { $0.id == previous.id })
+            else { return }
+            ledger.receipts[index] = previous
+        }) { [repository] in
+            try await repository.update(receipt)
+        }
+    }
+
+    func delete(_ receipt: Receipt) async {
+        guard let index = ledger.receipts.firstIndex(where: { $0.id == receipt.id }) else { return }
+        let removed = ledger.receipts.remove(at: index)
+        await perform(rollback: { [weak self] in
+            guard let self else { return }
+            ledger.receipts.insert(removed, at: min(index, ledger.receipts.count))
+        }) { [repository] in
+            try await repository.delete(receiptID: removed.id)
+        }
+    }
+
     // MARK: - Источники дохода
 
     @discardableResult
