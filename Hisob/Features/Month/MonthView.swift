@@ -4,7 +4,6 @@ import SwiftUI
 struct MonthView: View {
     @State var viewModel: MonthViewModel
     @State private var expandedIDs: Set<Expense.ID> = []
-    @State private var isAddingExpense = false
     @State private var editingExpense: Expense?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -27,24 +26,10 @@ struct MonthView: View {
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .background(DS.Palette.background)
-        .navigationTitle(L.Month.title)
+        // Заголовка нет, но панель навигации нужна: в ней живёт поиск.
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isAddingExpense = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel(L.Month.addExpense)
-            }
-        }
         .searchable(text: $viewModel.query.text, prompt: L.Month.search)
-        .sheet(isPresented: $isAddingExpense) {
-            ExpenseEditor(defaultDate: defaultDateForMonth, currency: viewModel.currency) { expense in
-                await viewModel.addExpense(expense)
-            }
-        }
         .sheet(item: $editingExpense) { expense in
             ExpenseEditor(editing: expense, currency: viewModel.currency) { updated in
                 await viewModel.updateExpense(updated)
@@ -274,9 +259,4 @@ struct MonthView: View {
         }
     }
 
-    /// Новая трата по умолчанию попадает в просматриваемый месяц, а не в сегодня:
-    /// иначе при заполнении прошлого месяца каждая запись улетала бы в текущий.
-    private var defaultDateForMonth: Date {
-        viewModel.isCurrentMonth ? .now : viewModel.month.startDate()
-    }
 }

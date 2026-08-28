@@ -7,11 +7,22 @@ struct RootTabView: View {
     let lock: BiometricLock
 
     @State private var router = AppRouter()
+    /// Вью-модель месяца живёт здесь, потому что кнопка добавления вынесена
+    /// из экрана к панели вкладок и должна класть трату в тот же месяц.
+    @State private var monthViewModel: MonthViewModel
+    @State private var isAddingExpense = false
+
+    init(store: LedgerStore, connection: ConnectionSettings, lock: BiometricLock) {
+        self.store = store
+        self.connection = connection
+        self.lock = lock
+        _monthViewModel = State(initialValue: MonthViewModel(store: store))
+    }
 
     var body: some View {
         TabView(selection: tabSelection) {
             NavigationStack(path: $router.monthPath) {
-                MonthView(viewModel: MonthViewModel(store: store))
+                MonthView(viewModel: monthViewModel)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
             .tabItem { Label(AppTab.month.title, systemImage: AppTab.month.symbol) }
@@ -32,6 +43,21 @@ struct RootTabView: View {
             .tag(AppTab.settings)
         }
         .tint(DS.Palette.brand)
+        // Системное сжатие панели при прокрутке — родное поведение iOS 26.
+        .nativeTabBarMinimize()
+        .tabAccessory(
+            showsAdd: router.selectedTab == .month,
+            remaining: monthViewModel.summary.remaining,
+            currency: monthViewModel.currency
+        ) {
+            isAddingExpense = true
+        }
+        .sheet(isPresented: $isAddingExpense) {
+            ExpenseEditor(defaultDate: monthViewModel.defaultDate,
+                          currency: monthViewModel.currency) { expense in
+                await monthViewModel.addExpense(expense)
+            }
+        }
     }
 
     /// Перехватывает выбор таба, чтобы повторное нажатие сбрасывало стек.

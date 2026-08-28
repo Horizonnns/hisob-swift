@@ -78,6 +78,12 @@ final class MonthViewModel {
 
     var hasFilter: Bool { !query.isEmpty }
 
+    /// Дата новой траты: в текущем месяце — сегодня, в прошлом — его первое
+    /// число, иначе запись улетела бы в другой месяц.
+    var defaultDate: Date {
+        isCurrentMonth ? .now : month.startDate()
+    }
+
     var isCurrentMonth: Bool { month == YearMonth.current(calendar: calendar) }
 
     /// Перенос показывается только когда он есть — как в веб-версии.
