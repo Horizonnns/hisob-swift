@@ -1,10 +1,10 @@
 import type { Hono } from 'hono'
-import { expenseToDTO, sourceToDTO } from './lib/dto.js'
+import { expenseToDTO, receiptToDTO, sourceToDTO } from './lib/dto.js'
 import { isDatabaseUnavailable } from './lib/errors.js'
 import { ERROR_MESSAGES } from './lib/http.js'
 import { dateFromString, moneyFromString } from './lib/money.js'
 import { prisma } from './lib/prisma.js'
-import { expenseSchema, incomeSourceSchema, settingsSchema } from './lib/schemas.js'
+import { expenseSchema, incomeSourceSchema, receiptSchema, settingsSchema } from './lib/schemas.js'
 import { requireToken } from './middleware/auth.js'
 import { validateJSON } from './middleware/validate.js'
 
@@ -64,16 +64,18 @@ export function registerRoutes(app: Hono): Hono {
 	 * приложение забирает его один раз и дальше живёт на локальном снимке.
 	 */
 	app.get('/api/ledger', async c => {
-		const [settings, sources, expenses] = await Promise.all([
+		const [settings, sources, expenses, receipts] = await Promise.all([
 			prisma.settings.findUnique({ where: { id: 'singleton' } }),
 			prisma.incomeSource.findMany({ include: { salaries: true }, orderBy: { name: 'asc' } }),
-			prisma.expense.findMany({ include: { items: true }, orderBy: { date: 'asc' } })
+			prisma.expense.findMany({ include: { items: true }, orderBy: { date: 'asc' } }),
+			prisma.receipt.findMany({ orderBy: { date: 'asc' } })
 		])
 
 		return c.json({
 			currency: settings?.currency ?? 'TJS',
 			sources: sources.map(sourceToDTO),
-			expenses: expenses.map(expenseToDTO)
+			expenses: expenses.map(expenseToDTO),
+			receipts: receipts.map(receiptToDTO)
 		})
 	})
 
@@ -154,6 +156,59 @@ export function registerRoutes(app: Hono): Hono {
 	app.delete('/api/expenses/:id', async c => {
 		const removed = await prisma.expense.deleteMany({ where: { id: c.req.param('id') } })
 		if (removed.count === 0) return c.json({ error: 'Expense not found' }, 404)
+		return c.json({ ok: true })
+	})
+
+	/**
+	 * Разовое поступление: подарок, возврат, продажа. Никаких позиций —
+	 * это всегда одна сумма, поэтому и маршруты проще, чем у трат.
+	 */
+	app.post('/api/receipts', validateJSON(receiptSchema), async c => {
+		const input = c.req.valid('json')
+
+		const existing = await prisma.receipt.findUnique({
+			where: { id: input.id },
+			select: { id: true }
+		})
+		if (existing) return c.json({ error: 'Receipt already exists' }, 409)
+
+		const created = await prisma.receipt.create({
+			data: {
+				id: input.id,
+				date: dateFromString(input.date),
+				kind: input.kind,
+				title: input.title,
+				amount: moneyFromString(input.amount)
+			}
+		})
+
+		return c.json(receiptToDTO(created), 201)
+	})
+
+	app.patch('/api/receipts/:id', validateJSON(receiptSchema), async c => {
+		const id = c.req.param('id')
+		const input = c.req.valid('json')
+		if (input.id !== id) return c.json({ error: 'Body id does not match path id' }, 400)
+
+		const existing = await prisma.receipt.findUnique({ where: { id }, select: { id: true } })
+		if (!existing) return c.json({ error: 'Receipt not found' }, 404)
+
+		const updated = await prisma.receipt.update({
+			where: { id },
+			data: {
+				date: dateFromString(input.date),
+				kind: input.kind,
+				title: input.title,
+				amount: moneyFromString(input.amount)
+			}
+		})
+
+		return c.json(receiptToDTO(updated))
+	})
+
+	app.delete('/api/receipts/:id', async c => {
+		const removed = await prisma.receipt.deleteMany({ where: { id: c.req.param('id') } })
+		if (removed.count === 0) return c.json({ error: 'Receipt not found' }, 404)
 		return c.json({ ok: true })
 	})
 

@@ -54,9 +54,18 @@ export const incomeSourceSchema = z.object({
 	salaries: z.array(salaryEntrySchema).default([])
 })
 
+export const receiptSchema = z.object({
+	id: uuid,
+	date: dayString,
+	kind: z.string().min(1).max(64),
+	title: z.string().max(200).default(''),
+	amount: moneyString
+})
+
 export const settingsSchema = z.object({
 	currency: z.string().length(3)
 })
 
 export type ExpenseInput = z.infer<typeof expenseSchema>
+export type ReceiptInput = z.infer<typeof receiptSchema>
 export type IncomeSourceInput = z.infer<typeof incomeSourceSchema>

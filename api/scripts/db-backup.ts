@@ -18,10 +18,11 @@ async function main() {
 		process.exit(1)
 	}
 
-	const [settings, sources, expenses] = await Promise.all([
+	const [settings, sources, expenses, receipts] = await Promise.all([
 		prisma.settings.findUnique({ where: { id: 'singleton' } }),
 		prisma.incomeSource.findMany({ include: { salaries: true } }),
-		prisma.expense.findMany({ include: { items: true } })
+		prisma.expense.findMany({ include: { items: true } }),
+		prisma.receipt.findMany()
 	])
 
 	const payload = {
@@ -43,13 +44,20 @@ async function main() {
 			amount: e.amount === null ? null : e.amount.toFixed(2),
 			incomeSourceId: e.incomeSourceId,
 			items: e.items.map(i => ({ id: i.id, amount: i.amount.toFixed(2), title: i.title }))
+		})),
+		receipts: receipts.map(r => ({
+			id: r.id,
+			date: r.date.toISOString().slice(0, 10),
+			kind: r.kind,
+			title: r.title,
+			amount: r.amount.toFixed(2)
 		}))
 	}
 
 	writeFileSync(path, JSON.stringify(payload, null, 2))
 	console.log(
 		`Сохранено в ${path}: источников ${payload.sources.length}, ` +
-		`трат ${payload.expenses.length}`
+		`трат ${payload.expenses.length}, поступлений ${payload.receipts.length}`
 	)
 }
 

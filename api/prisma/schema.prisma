@@ -73,3 +73,22 @@ model ExpenseItem {
 
   @@index([expenseId])
 }
+
+/// Разовое поступление: подарок, возврат долга, продажа вещи.
+///
+/// Отдельно от `IncomeSource`: оклад повторяется каждый месяц и принадлежит
+/// месту работы, а такие деньги — событие одного дня. В доход месяца входят
+/// наравне с окладом.
+model Receipt {
+  id     String   @id
+  date   DateTime @db.Date
+  /// Стабильный ключ вида «gift», а не подпись: подписи живут в приложении.
+  kind   String
+  title  String   @default("")
+  amount Decimal  @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}

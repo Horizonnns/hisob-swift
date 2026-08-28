@@ -1,4 +1,4 @@
-import type { Expense, ExpenseItem, IncomeSource, SalaryEntry } from '@prisma/client'
+import type { Expense, ExpenseItem, IncomeSource, Receipt, SalaryEntry } from '@prisma/client'
 import { dateToString, moneyToString } from './money.js'
 
 type ExpenseRow = Expense & { items: ExpenseItem[] }
@@ -17,6 +17,16 @@ export function expenseToDTO(row: ExpenseRow) {
 			title: item.title
 		})),
 		incomeSourceId: row.incomeSourceId
+	}
+}
+
+export function receiptToDTO(row: Receipt) {
+	return {
+		id: row.id,
+		date: dateToString(row.date),
+		kind: row.kind,
+		title: row.title,
+		amount: moneyToString(row.amount)
 	}
 }
 

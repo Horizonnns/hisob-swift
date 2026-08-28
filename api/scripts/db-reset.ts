@@ -23,17 +23,22 @@ async function main() {
 
 	const before = {
 		sources: await prisma.incomeSource.count(),
-		expenses: await prisma.expense.count()
+		expenses: await prisma.expense.count(),
+		receipts: await prisma.receipt.count()
 	}
 
 	// Порядок важен: сначала зависимые записи.
+	await prisma.receipt.deleteMany()
 	await prisma.expenseItem.deleteMany()
 	await prisma.expense.deleteMany()
 	await prisma.salaryEntry.deleteMany()
 	await prisma.incomeSource.deleteMany()
 	await prisma.settings.deleteMany()
 
-	console.log(`Удалено: источников ${before.sources}, трат ${before.expenses}. База пуста.`)
+	console.log(
+		`Удалено: источников ${before.sources}, трат ${before.expenses}, ` +
+		`поступлений ${before.receipts}. База пуста.`
+	)
 }
 
 main()
