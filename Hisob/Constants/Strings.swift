@@ -44,7 +44,9 @@ enum L {
     enum Analytics {
         static let byCategory = "Расходы по категориям"
         static let byMonth = "Расходы по месяцам"
-        static let incomeSources = "Доход по источникам"
+        // Не «по источникам»: в списке теперь и подарки, а они приходят
+        // не с работы.
+        static let incomeSources = "Откуда деньги"
         static let total = "Всего"
         static let amount = "Сумма"
         static let month = "Месяц"

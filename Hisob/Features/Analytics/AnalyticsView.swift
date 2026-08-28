@@ -71,9 +71,10 @@ struct AnalyticsView: View {
                 .dsGlass()
             }
 
-            if !viewModel.incomeShares.isEmpty {
+            if !viewModel.incomeShares.isEmpty || !viewModel.receiptShares.isEmpty {
                 IncomeBreakdownCard(
                     shares: viewModel.incomeShares,
+                    receipts: viewModel.receiptShares,
                     total: viewModel.summary.income,
                     currency: viewModel.currency
                 )

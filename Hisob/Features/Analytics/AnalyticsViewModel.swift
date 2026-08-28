@@ -94,6 +94,8 @@ final class AnalyticsViewModel {
 
     var incomeShares: [IncomeShare] { summary.incomeBreakdown }
 
+    var receiptShares: [ReceiptShare] { summary.receiptBreakdown }
+
     var hasExpenses: Bool { !slices.isEmpty }
 
     func load() async {
