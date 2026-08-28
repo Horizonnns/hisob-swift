@@ -146,7 +146,9 @@ struct RowSkeleton: View {
 /// Заглушка сводки месяца — повторяет форму `MonthSummaryCard`.
 struct SummarySkeleton: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Spacing.m) {
+        VStack(alignment: .leading, spacing: DS.Spacing.l) {
+            SkeletonBlock(width: 148, height: 20, cornerRadius: 6)
+
             VStack(alignment: .leading, spacing: DS.Spacing.s) {
                 SkeletonBlock(width: 68, height: 9)
                 SkeletonBlock(width: 210, height: 34, cornerRadius: 9)

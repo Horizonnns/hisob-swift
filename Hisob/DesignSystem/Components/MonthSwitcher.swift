@@ -17,7 +17,7 @@ struct MonthSwitcher: View {
             arrow(symbol: "chevron.left", label: L.Month.previousMonth, action: onPrevious)
 
             VStack(spacing: 2) {
-                Text(title)
+                Text(month.displayTitle)
                     .font(DS.Typography.sectionTitle)
                     .contentTransition(reduceMotion ? .identity : .numericText())
                     .id(month)
@@ -40,19 +40,6 @@ struct MonthSwitcher: View {
         .sensoryFeedback(.selection, trigger: month)
     }
 
-    private var title: String {
-        Self.formatter.string(from: month.startDate()).capitalizedFirst
-    }
-
-    /// Формат задан явно: шаблонный `.dateTime.month(.wide).year()` в русской
-    /// локали добавляет «г.» — «Август 2026 г.», что в заголовке лишнее.
-    private static let formatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
-        formatter.dateFormat = "LLLL yyyy"
-        return formatter
-    }()
-
     private func arrow(symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
@@ -63,13 +50,5 @@ struct MonthSwitcher: View {
         .buttonStyle(.pressable)
         .dsGlass(cornerRadius: DS.Radius.control, isInteractive: true)
         .accessibilityLabel(label)
-    }
-}
-
-extension String {
-    /// «август 2026» → «Август 2026».
-    var capitalizedFirst: String {
-        guard let first else { return self }
-        return first.uppercased() + dropFirst()
     }
 }

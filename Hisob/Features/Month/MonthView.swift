@@ -53,14 +53,6 @@ struct MonthView: View {
     @ViewBuilder
     private var header: some View {
         VStack(spacing: DS.Spacing.l) {
-            MonthSwitcher(
-                month: viewModel.month,
-                isCurrent: viewModel.isCurrentMonth,
-                onPrevious: viewModel.goToPreviousMonth,
-                onNext: viewModel.goToNextMonth,
-                onCurrent: viewModel.goToCurrentMonth
-            )
-
             // Во время загрузки плашки не показываем: нули вместо сумм
             // читаются как настоящие данные.
             if viewModel.state != .loading {
@@ -75,10 +67,13 @@ struct MonthView: View {
 
     private var statTiles: some View {
         MonthSummaryCard(
+            month: viewModel.month,
+            isCurrent: viewModel.isCurrentMonth,
             summary: viewModel.summary,
             showsCarryover: viewModel.showsCarryover,
             onPrevious: viewModel.goToPreviousMonth,
-            onNext: viewModel.goToNextMonth
+            onNext: viewModel.goToNextMonth,
+            onCurrent: viewModel.goToCurrentMonth
         )
     }
 
