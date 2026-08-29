@@ -21,18 +21,9 @@ struct MonthSummaryCard: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Смещение под пальцем. Карточка идёт за ним с сопротивлением — так видно,
-    /// что жест распознан, но она не убегает с экрана.
-    @State private var dragOffset: CGFloat = 0
-    @State private var switchCount = 0
-
-    /// Порог срабатывания. Меньше — и месяц будет перелистываться от случайного
-    /// касания при прокрутке списка.
-    private let threshold: CGFloat = 56
-
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Spacing.l) {
-            monthRow
+            MonthTitleRow(month: month, isCurrent: isCurrent, onCurrent: onCurrent)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(L.Month.remaining)
@@ -68,66 +59,7 @@ struct MonthSummaryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Spacing.l)
         .dsGlass()
-        .offset(x: dragOffset)
-        // Подложкой, а не наложением: наложение перехватывало касания, и
-        // кнопка «к текущему» под ним переставала нажиматься.
-        .background {
-            HorizontalSwipe(onChange: follow, onEnd: finish)
-        }
-        .sensoryFeedback(.selection, trigger: switchCount)
-        // Жест недоступен VoiceOver, поэтому те же действия — отдельными
-        // пунктами ротора.
-        .accessibilityAction(named: L.Month.previousMonth, onPrevious)
-        .accessibilityAction(named: L.Month.nextMonth, onNext)
-    }
-
-    private var monthRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Spacing.s) {
-            Text(month.displayTitle)
-                .font(DS.Typography.sectionTitle)
-                .contentTransition(reduceMotion ? .identity : .numericText())
-                .id(month)
-                .transition(.opacity)
-
-            Spacer(minLength: DS.Spacing.s)
-
-            // Кнопка появляется только когда есть куда возвращаться: на
-            // текущем месяце подпись «текущий» ничего не сообщала бы.
-            if !isCurrent {
-                Button(action: onCurrent) {
-                    Text(L.Month.goToCurrent)
-                        .font(DS.Typography.label)
-                        .textCase(.uppercase)
-                        .foregroundStyle(DS.Palette.brand)
-                        .padding(.horizontal, DS.Spacing.s)
-                        .padding(.vertical, DS.Spacing.xs)
-                        .contentShape(.capsule)
-                }
-                .buttonStyle(.pressable(scale: 0.96))
-                .dsGlass(cornerRadius: DS.Radius.chip, isInteractive: true)
-                .transition(.opacity.combined(with: .scale))
-            }
-        }
-        .animation(DS.Motion.resolved(DS.Motion.snappy, reduceMotion: reduceMotion), value: month)
-    }
-
-    /// Смена месяца свайпом по карточке: влево — вперёд, вправо — назад, как
-    /// и стрелки над ней.
-    private func follow(_ dx: CGFloat) {
-        // Идём за пальцем с сопротивлением: видно, что жест распознан, но
-        // карточка не убегает с экрана.
-        dragOffset = dx / 3
-    }
-
-    private func finish(_ dx: CGFloat) {
-        withAnimation(DS.Motion.resolved(DS.Motion.snappy, reduceMotion: reduceMotion)) {
-            dragOffset = 0
-        }
-
-        guard abs(dx) > threshold else { return }
-
-        switchCount += 1
-        if dx < 0 { onNext() } else { onPrevious() }
+        .monthPaging(onPrevious: onPrevious, onNext: onNext)
     }
 
     private func stat(_ label: String, _ amount: Money,
