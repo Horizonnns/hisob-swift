@@ -9,16 +9,9 @@ struct AnalyticsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: DS.Spacing.l) {
-                MonthSwitcher(
-                    month: viewModel.month,
-                    isCurrent: viewModel.isCurrentMonth,
-                    onPrevious: viewModel.goToPreviousMonth,
-                    onNext: viewModel.goToNextMonth,
-                    onCurrent: viewModel.goToCurrentMonth
-                )
-
                 content
             }
+
             .padding(.horizontal, DS.Spacing.screen)
             .padding(.bottom, DS.Spacing.xxl)
             // Подписи оси последнего графика не должны упираться в плавающий
@@ -54,6 +47,9 @@ struct AnalyticsView: View {
         case .loaded:
             if viewModel.hasExpenses {
                 CategoryDonutChart(
+                    month: viewModel.month,
+                    isCurrent: viewModel.isCurrentMonth,
+                    onCurrent: viewModel.goToCurrentMonth,
                     slices: viewModel.slices,
                     currency: viewModel.currency,
                     centerLabel: viewModel.centerLabel,
@@ -62,13 +58,35 @@ struct AnalyticsView: View {
                     onSelect: viewModel.toggleSelection,
                     categoryAt: viewModel.category(atAngleValue:)
                 )
-            } else {
-                EmptyStateView(
-                    symbol: "chart.pie",
-                    title: L.Analytics.emptyTitle,
-                    message: L.Analytics.emptyMessage
+                // Жест на самой карточке, а не на содержимом экрана: подложка
+                // под карточками касаний не получает — их забирает стекло.
+                .monthPaging(
+                    onPrevious: viewModel.goToPreviousMonth,
+                    onNext: viewModel.goToNextMonth,
+                    attachToAncestor: true
                 )
+            } else {
+                VStack(spacing: DS.Spacing.l) {
+                    MonthTitleRow(
+                        month: viewModel.month,
+                        isCurrent: viewModel.isCurrentMonth,
+                        onCurrent: viewModel.goToCurrentMonth
+                    )
+
+                    EmptyStateView(
+                        symbol: "chart.pie",
+                        title: L.Analytics.emptyTitle,
+                        message: L.Analytics.emptyMessage
+                    )
+                }
+                .padding(DS.Spacing.l)
                 .dsGlass()
+                // И в пустом месяце тоже, иначе с него нечем было бы уйти.
+                .monthPaging(
+                    onPrevious: viewModel.goToPreviousMonth,
+                    onNext: viewModel.goToNextMonth,
+                    attachToAncestor: true
+                )
             }
 
             if !viewModel.incomeShares.isEmpty || !viewModel.receiptShares.isEmpty {

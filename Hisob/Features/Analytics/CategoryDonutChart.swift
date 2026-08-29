@@ -4,6 +4,9 @@ import SwiftUI
 
 /// Кольцевая диаграмма расходов по категориям с итогом в центре.
 struct CategoryDonutChart: View {
+    let month: YearMonth
+    let isCurrent: Bool
+    let onCurrent: () -> Void
     let slices: [CategorySlice]
     let currency: CurrencyCode
     let centerLabel: String
@@ -17,6 +20,10 @@ struct CategoryDonutChart: View {
 
     var body: some View {
         VStack(spacing: DS.Spacing.l) {
+            // Месяц живёт в карточке, а не отдельной строкой со стрелками над
+            // ней: строка занимала место, а листают месяцы свайпом.
+            MonthTitleRow(month: month, isCurrent: isCurrent, onCurrent: onCurrent)
+
             chart
             legend
         }

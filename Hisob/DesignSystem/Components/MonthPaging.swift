@@ -48,6 +48,7 @@ struct MonthTitleRow: View {
 private struct MonthPaging: ViewModifier {
     let onPrevious: () -> Void
     let onNext: () -> Void
+    let attachToAncestor: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragOffset: CGFloat = 0
@@ -63,7 +64,8 @@ private struct MonthPaging: ViewModifier {
             // Подложкой, а не наложением: наложение перехватывало касания, и
             // кнопки под ним переставали нажиматься.
             .background {
-                HorizontalSwipe(onChange: follow, onEnd: finish)
+                HorizontalSwipe(onChange: follow, onEnd: finish,
+                                attachToAncestor: attachToAncestor)
             }
             .sensoryFeedback(.selection, trigger: switchCount)
             // Жест недоступен VoiceOver, поэтому те же действия — отдельными
@@ -92,10 +94,15 @@ private struct MonthPaging: ViewModifier {
 
 extension View {
     /// Свайп влево — следующий месяц, вправо — предыдущий.
+    ///
+    /// `attachToAncestor` нужен там, где поверх содержимого лежит свой
+    /// обработчик касаний — например прозрачный слой выбора сектора диаграммы.
     func monthPaging(
         onPrevious: @escaping () -> Void,
-        onNext: @escaping () -> Void
+        onNext: @escaping () -> Void,
+        attachToAncestor: Bool = false
     ) -> some View {
-        modifier(MonthPaging(onPrevious: onPrevious, onNext: onNext))
+        modifier(MonthPaging(onPrevious: onPrevious, onNext: onNext,
+                             attachToAncestor: attachToAncestor))
     }
 }

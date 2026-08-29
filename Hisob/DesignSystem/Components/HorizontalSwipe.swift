@@ -12,9 +12,16 @@ import UIKit
 struct HorizontalSwipe: UIViewRepresentable {
     var onChange: (CGFloat) -> Void
     var onEnd: (CGFloat) -> Void
+    /// Вешать жест на родительское вью, а не на себя.
+    ///
+    /// Подложка получает касание, только если его никто не перехватил выше.
+    /// Над диаграммой лежит прозрачный слой выбора сектора — он забирает
+    /// касания себе, и до подложки они не доходят. Распознаватель на предке
+    /// видит касания всего поддерева и решает это.
+    var attachToAncestor = false
 
     func makeUIView(context: Context) -> UIView {
-        let view = UIView()
+        let view = PanHost()
         view.backgroundColor = .clear
 
         let pan = UIPanGestureRecognizer(
@@ -22,8 +29,29 @@ struct HorizontalSwipe: UIViewRepresentable {
             action: #selector(Coordinator.handle(_:))
         )
         pan.delegate = context.coordinator
-        view.addGestureRecognizer(pan)
+
+        if attachToAncestor {
+            view.pendingRecognizer = pan
+        } else {
+            view.addGestureRecognizer(pan)
+        }
         return view
+    }
+
+    /// Ждёт появления в иерархии, чтобы дотянуться до предка.
+    final class PanHost: UIView {
+        var pendingRecognizer: UIGestureRecognizer?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard let pan = pendingRecognizer, window != nil else { return }
+
+            // Два уровня вверх: первый — контейнер подложки, второй — само
+            // содержимое карточки вместе со всем, что на нём лежит.
+            let target = superview?.superview ?? superview
+            target?.addGestureRecognizer(pan)
+            pendingRecognizer = nil
+        }
     }
 
     func updateUIView(_ view: UIView, context: Context) {
