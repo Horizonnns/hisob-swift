@@ -2,8 +2,7 @@
  * Заливает в базу содержимое файла, снятого `npm run db:backup`.
  *
  * Пара к `db:reset`: без неё бэкап был тупиком — снять снимок можно, а
- * развернуть обратно нечем. `import:legacy` не подходит, он читает формат
- * выгрузки из веба, а не наш.
+ * развернуть обратно нечем.
  *
  * По умолчанию отказывается работать на непустой базе: восстановление поверх
  * существующих записей либо упало бы на совпадении идентификаторов, либо
@@ -48,8 +47,7 @@ function parse(path: string): Backup {
 	const raw = JSON.parse(readFileSync(path, 'utf8'))
 	if (Array.isArray(raw) || typeof raw !== 'object' || raw === null) {
 		throw new Error(
-			'Это не файл бэкапа. Ожидается объект с полями sources/expenses/receipts.\n' +
-			'Похоже на выгрузку из веба — для неё есть npm run import:legacy.'
+			'Это не файл бэкапа. Ожидается объект с полями sources/expenses/receipts.'
 		)
 	}
 	const hasKnownFields = ['sources', 'expenses', 'receipts'].some(key => key in raw)

@@ -15,7 +15,6 @@ DerivedData/
 node_modules/
 *.tsbuildinfo
 .vercel
-legacy-export.json
 backup*.json
 *-backup.json
 

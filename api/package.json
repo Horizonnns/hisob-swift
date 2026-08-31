@@ -8,7 +8,6 @@
     "start": "tsx scripts/serve.ts",
     "typecheck": "tsc --noEmit",
     "check:bundle": "node scripts/check-bundle.mjs",
-    "check:legacy": "tsx scripts/check-legacy-mapping.ts",
     "postinstall": "prisma generate",
     "build": "prisma generate",
     "db:generate": "prisma generate",
@@ -19,7 +18,6 @@
 		"db:restore": "tsx --env-file-if-exists=.env scripts/db-restore.ts",
     "db:reset": "tsx --env-file-if-exists=.env scripts/db-reset.ts",
     "db:studio": "prisma studio",
-    "import:legacy": "tsx --env-file-if-exists=.env scripts/import-legacy.ts",
     "db:check": "node --env-file-if-exists=.env scripts/check-db-env.mjs"
   },
   "dependencies": {

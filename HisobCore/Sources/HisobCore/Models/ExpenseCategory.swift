@@ -46,28 +46,4 @@ public struct ExpenseCategory: RawRepresentable, Hashable, Codable, Sendable {
 
     /// Русские подписи, под которыми категории лежат в проде.
     /// Используется однократно при переносе данных из Postgres.
-    private static let legacyNames: [String: ExpenseCategory] = [
-        "Еда": .food,
-        "Транспорт": .transport,
-        "Аренда": .rent,
-        "Коммуналка": .utilities,
-        "Связь/Интернет": .communication,
-        "Здоровье": .health,
-        "Гигиена": .hygiene,
-        "Косметика": .cosmetics,
-        "Одежда": .clothing,
-        "Развлечения": .entertainment,
-        "Образование": .education,
-        "Подарки": .gifts,
-        "Благотворительность": .charity,
-        "Кредит": .loan,
-        "Сбережения": .savings,
-        "Прочее": .other
-    ]
-
-    /// Категория по подписи из старой базы.
-    /// Нераспознанная подпись сохраняется как есть — данные не теряются.
-    public init(legacyName: String) {
-        self = Self.legacyNames[legacyName] ?? ExpenseCategory(rawValue: legacyName)
-    }
 }
