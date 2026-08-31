@@ -16,6 +16,7 @@
     "db:deploy": "npm run db:check && prisma migrate deploy",
     "db:status": "tsx --env-file-if-exists=.env scripts/db-status.ts",
     "db:backup": "tsx --env-file-if-exists=.env scripts/db-backup.ts",
+		"db:restore": "tsx --env-file-if-exists=.env scripts/db-restore.ts",
     "db:reset": "tsx --env-file-if-exists=.env scripts/db-reset.ts",
     "db:studio": "prisma studio",
     "import:legacy": "tsx --env-file-if-exists=.env scripts/import-legacy.ts",
