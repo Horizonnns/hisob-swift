@@ -92,64 +92,69 @@ async function main() {
 		process.exit(1)
 	}
 
-	// Одной транзакцией: половина восстановленной базы хуже, чем пустая.
-	await prisma.$transaction(async tx => {
-		await tx.settings.upsert({
+	// Пакетами, а не по записи: 433 траты по отдельному запросу — это 433
+	// обращения к удалённой базе, и транзакция не доживала до конца
+	// («Transaction not found»). Здесь запросов шесть, и все в одной
+	// транзакции: половины восстановленной базы не бывает.
+	//
+	// `createMany` не умеет вложенные записи, поэтому дети вставляются
+	// отдельным запросом со ссылкой на родителя.
+	const salaries = sources.flatMap(source =>
+		(source.salaries ?? []).map(entry => ({
+			id: entry.id,
+			sourceId: source.id,
+			effectiveFrom: day(entry.effectiveFrom),
+			amount: entry.amount
+		}))
+	)
+
+	const items = expenses.flatMap(expense =>
+		(expense.items ?? []).map(item => ({
+			id: item.id,
+			expenseId: expense.id,
+			amount: item.amount,
+			title: item.title
+		}))
+	)
+
+	const currency = backup.currency ?? 'TJS'
+
+	await prisma.$transaction([
+		prisma.settings.upsert({
 			where: { id: 'singleton' },
-			update: { currency: backup.currency ?? 'TJS' },
-			create: { id: 'singleton', currency: backup.currency ?? 'TJS' }
+			update: { currency },
+			create: { id: 'singleton', currency }
+		}),
+		prisma.incomeSource.createMany({
+			data: sources.map(source => ({
+				id: source.id,
+				name: source.name,
+				role: source.role ?? '',
+				endedAt: source.endedAt ?? null
+			}))
+		}),
+		prisma.salaryEntry.createMany({ data: salaries }),
+		prisma.expense.createMany({
+			data: expenses.map(expense => ({
+				id: expense.id,
+				date: day(expense.date),
+				category: expense.category,
+				title: expense.title ?? '',
+				amount: expense.amount ?? null,
+				incomeSourceId: expense.incomeSourceId ?? null
+			}))
+		}),
+		prisma.expenseItem.createMany({ data: items }),
+		prisma.receipt.createMany({
+			data: receipts.map(receipt => ({
+				id: receipt.id,
+				date: day(receipt.date),
+				kind: receipt.kind,
+				title: receipt.title ?? '',
+				amount: receipt.amount
+			}))
 		})
-
-		for (const source of sources) {
-			await tx.incomeSource.create({
-				data: {
-					id: source.id,
-					name: source.name,
-					role: source.role ?? '',
-					endedAt: source.endedAt ?? null,
-					salaries: {
-						create: (source.salaries ?? []).map(entry => ({
-							id: entry.id,
-							effectiveFrom: day(entry.effectiveFrom),
-							amount: entry.amount
-						}))
-					}
-				}
-			})
-		}
-
-		for (const expense of expenses) {
-			await tx.expense.create({
-				data: {
-					id: expense.id,
-					date: day(expense.date),
-					category: expense.category,
-					title: expense.title ?? '',
-					amount: expense.amount ?? null,
-					incomeSourceId: expense.incomeSourceId ?? null,
-					items: {
-						create: (expense.items ?? []).map(item => ({
-							id: item.id,
-							amount: item.amount,
-							title: item.title
-						}))
-					}
-				}
-			})
-		}
-
-		for (const receipt of receipts) {
-			await tx.receipt.create({
-				data: {
-					id: receipt.id,
-					date: day(receipt.date),
-					kind: receipt.kind,
-					title: receipt.title ?? '',
-					amount: receipt.amount
-				}
-			})
-		}
-	}, { timeout: 120_000 })
+	])
 
 	console.log(
 		`Восстановлено из ${path}` +
